@@ -1,0 +1,39 @@
+########################################
+# Program: water
+# Rundate: Tue 15 Oct 2019 21:49:39
+# Commandline: water
+#    -asequence /media/scratch/aft_projects_tmp/python3_myenv/test/results/CDR3_fastas/IGH-MIX3-clonal-control_IGHV4-55-08_IGHJ6-02-fb-IGHD.fasta
+#    -bsequence /dev/fd/63
+#    -gapopen 10.0
+#    -gapextend 0.5
+#    -outfile /media/scratch/aft_projects_tmp/python3_myenv/test/CDR3_blast/IGH-MIX3-clonal-control_IGHV4-55-08_IGHJ6-02-fb-IGHD-EW_IGHD2-15-01.water
+#    -aformat3 pair
+# Align_format: pair
+# Report_file: /media/scratch/aft_projects_tmp/python3_myenv/test/CDR3_blast/IGH-MIX3-clonal-control_IGHV4-55-08_IGHJ6-02-fb-IGHD-EW_IGHD2-15-01.water
+########################################
+
+#=======================================
+#
+# Aligned_sequences: 2
+# 1: 1
+# 2: IGHD2-15-01
+# Matrix: EDNAFULL
+# Gap_penalty: 10.0
+# Extend_penalty: 0.5
+#
+# Length: 7
+# Identity:       6/7 (85.7%)
+# Similarity:     6/7 (85.7%)
+# Gaps:           0/7 ( 0.0%)
+# Score: 26.0
+# 
+#
+#=======================================
+
+1                 23 GGAGGTA     29
+                     ||.||||
+IGHD2-15-01       14 ggtggta     20
+
+
+#---------------------------------------
+#---------------------------------------

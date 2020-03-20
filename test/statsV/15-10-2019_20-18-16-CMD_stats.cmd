@@ -1,0 +1,1 @@
+samtools idxstats /media/scratch/aft_projects_tmp/python3_myenv/test/bamsV/IGH-MIX3-clonal-control-sorted.bam > /media/scratch/aft_projects_tmp/python3_myenv/test/statsV/IGH-MIX3-clonal-control-stats.txt

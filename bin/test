@@ -1,0 +1,4 @@
+#! /bin/bash
+
+fastqs_folder="../test/fastq_test"
+python ../src/pipeline.py --pipeline -f $fastqs_folder -o ../test -p1

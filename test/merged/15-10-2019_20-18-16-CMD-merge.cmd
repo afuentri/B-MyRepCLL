@@ -1,0 +1,2 @@
+zcat /media/scratch/aft_projects_tmp/python3_myenv/test/fastq_test/IGH-MIX3-clonal-control_S58_L001_R2_001.fastq.gz | gzip > /media/scratch/aft_projects_tmp/python3_myenv/test/merged/IGH-MIX3-clonal-control_S58_L001_R2_001.fastq.gz
+zcat /media/scratch/aft_projects_tmp/python3_myenv/test/fastq_test/IGH-MIX3-clonal-control_S58_L001_R1_001.fastq.gz | gzip > /media/scratch/aft_projects_tmp/python3_myenv/test/merged/IGH-MIX3-clonal-control_S58_L001_R1_001.fastq.gz

@@ -1,0 +1,6 @@
+sample_name,region,n_reads_mapped,region_length
+IGH-MIX3-clonal-control,IGHJ4-03,1,48
+IGH-MIX3-clonal-control,IGHJ6-01,271,63
+IGH-MIX3-clonal-control,IGHJ6-02,11115,62
+IGH-MIX3-clonal-control,IGHJ6-03,1,62
+IGH-MIX3-clonal-control,IGHJ6-04,227,63

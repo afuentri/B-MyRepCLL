@@ -1,0 +1,263 @@
+#! /usr/bin/python3.5
+
+"""This set of functions work to extract CDR3 in an intelligent way from the
+consensus sequence"""
+
+# import modules
+import sys
+import string
+import re
+import os
+
+repo = os.environ['scripts_repo']
+
+## fasta sequence
+fasta = sys.argv[1]
+
+def aminoacid_dictionary():
+
+    """Codon dictionary to convert DNA sequence to protein"""
+    d = {'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
+         'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
+         'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
+         'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',
+         'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
+         'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
+         'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
+         'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
+         'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
+         'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
+         'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
+         'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
+         'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
+         'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
+         'TAC':'Y', 'TAT':'Y', 'TAA':'_', 'TAG':'_',
+         'TGC':'C', 'TGT':'C', 'TGA':'_', 'TGG':'W'}
+
+    return d
+
+
+def read_FASTA(f):
+
+    """"""
+    with open(f) as fhand:
+        return fhand.read().split('>')[1:]
+
+
+def read_consensus(f):
+
+    """Read the FASTA format consensus file"""
+    return(seq.partition('\n') for seq in read_FASTA(f))
+
+
+def read_sequence(f):
+
+    """"""
+    return [(info[1:], seq.replace('\n','').upper())
+            for info, ignore, seq in read_consensus(f)]
+
+
+def translate_codon(codon):
+
+    """"""
+    d = aminoacid_dictionary()
+    return d.get(codon)
+
+
+def drawback3(s, pos):
+
+    """"""
+    # generator
+    aminoacid_p = ((translate_codon(s[p-3:p]), p) for p in range(pos, 3, -3))
+    return aminoacid_p
+
+
+def seek_sequence(pat, seq):
+
+    # double loop to find matches despite of overlappings
+    matches = []
+    for s in range(len(seq)):
+        nseq = seq[s:]
+        matches = matches + [m.start(0) + s for m in re.finditer(pat, nseq)]
+    
+    return list(set(matches))
+
+
+def sequence_remove(variants, seq):
+
+    """"""
+    new_seq = seq
+    for i in variants: 
+        pos, ref, alt = i
+        seq.replace(alt, ref)
+        post_pos = int(pos) + len(alt)
+        pre_string = seq[:int(pos)-1]
+        post_string = seq[post_pos-1:]
+        new_seq = pre_string + ref + post_string
+        
+    return new_seq
+
+
+def gather_variants(list_variants, sequence):
+
+    """"""
+    list_things = []
+    for i in list_variants:
+        alleles, pos = i.split(':')
+        ref, alt = alleles.split('/')
+        list_things.append((pos, ref, alt))
+
+        sequence = sequence_remove(list_things, sequence)
+    
+    return sequence
+
+
+def CDR3_minning(motif, min_cys, all_cys, seq):
+
+    """"""
+    possible_cdr3 = []
+    CDR3, CDR3_end, CDR3_start = ('', '', '')
+    for m in motif:
+        if CDR3 != '' and m <= 50:
+            break
+        orf_cys = [e for e in all_cys if ((m - e) % 3 == 0) ]
+        ## choose min_cys less than 60 nuc from WGXG
+        lvalid = [e for e in orf_cys if (m - e) < 85]
+        if lvalid != []:
+            cont_cys = min(lvalid)
+        else:
+            cont_cys = []
+    
+        seq_CDR3 = []
+        cys_codon = 1000
+        aa = drawback3(seq, m + 3)
+        if cont_cys != []:
+            while cys_codon > cont_cys + 1:
+    
+                cys_codon_pos = next(aa, None)
+                if cys_codon_pos:
+                    ##
+                    codon, cys_codon = cys_codon_pos
+                    print(codon)
+                    if codon:
+                        seq_CDR3.append(codon)
+                    else:
+                        seq_CDR3.append('X')
+            if not '_' in seq_CDR3 and len(seq_CDR3) > 1:
+                possible_cdr3.append(seq_CDR3)
+                    
+    
+        if possible_cdr3 == []:
+            CDR3, CDR3_end, CDR3_start = (None, None, None)
+        else:
+            for s in possible_cdr3:
+    
+                if 'X' in s:
+                    ix = s.index('X')
+                    CDR3_all = s[ix:]
+                else:
+                    CDR3_all = s
+    
+            inver = CDR3_all[::-1]
+            
+            if 'C' in inver:
+                CDR3 = ''.join(inver[inver.index('C'):])
+                CDR3_end = m + 3
+                CDR3_start = cys_codon -3
+                    
+    print(CDR3)
+    return CDR3, CDR3_start, CDR3_end
+    #print seq_CDR3
+    #CDR3 = ''.join(seq_CDR3[::-1])
+    #CDR3_end = m
+    #CDR3_start = cys_codon
+    #return CDR3, (CDR3_start - 3), (CDR3_end + 3)
+
+
+def get_CDR3(seq, mincys=80):
+
+    """"""
+    productive = False
+    motif = seek_sequence('TGGGG[ACGT][ACGT]{3}GG[ACGT]', seq)
+    cys = seek_sequence('TG[TC]', seq)
+    ## we have to check that there are sequences with cys
+    ## greater than mincys
+    ## we are removing all morif starting positions below 10
+    list_cys = [ e for e in cys if e > mincys ]
+    min_cys_big = [ e for e in list_cys if e > 10]
+    min_motif = [ e for e in motif if e > 10 ]
+    if min_motif == []:
+    
+        CDR3, start, end = (None, None, None)
+    
+    else:
+        if min_cys_big != []:
+            
+            ## 80 is not valid for sequences in the middle
+            CDR3, start, end = CDR3_minning(min_motif,
+                                            min(min_cys_big), min_cys_big, seq)
+            productive = True
+        else:
+            CDR3, start, end = (None, None, None)
+        
+    print(CDR3)
+    return CDR3, start, end, productive
+
+
+def decide_CDR3(A, B, C, P):
+    
+    """"""
+    D_set = set(A)
+    if not A[0] or not A[1]:
+
+        return None, None, None, None
+    
+    elif len(D_set) > 1:
+
+        if ('_' in A[0]) or (not A[0].endswith('W')):
+            D = 1
+               
+        elif '_' in A[1] or not A[1].endswith('W'):
+            D = 0
+        else:
+            D = A.index(max(A, key = len))
+    else:
+        D = 0
+    
+    return A[D], B[D], C[D], P[D]
+
+
+## argument fasta, ref_seq, VCF, disruption, list_insertions, list_deletions
+## if we give a VCF with variants as input we shall call function parse_vcf_IGHD from pipeline.py
+
+def cdr3_extraction(fasta, mincys):
+    
+    """
+    SCRIPT FOR DETERMINING CDR3 IN A GIVEN SEQUENCE
+    """
+    mincys = 3
+    
+    ## main
+    #productivity = ''
+
+    # revisar porque creo que la disrupcion tiene que caer en CDR3
+    #if disruption:
+    #    productivity = 'potentially productive'
+    #else:
+    #    productivity = 'productive'
+        
+    # get the sequences that we have to replace or insert and remove them in the consensus sequence
+    #clean_seq = gather_variants(list_insertions, fasta)
+    #clean_seq = gather_variants(list_deletions, clean_seq)
+    # search for the motives and get CDR3
+    ## modified sequence without indels
+    #CDR3, start, end, prod = get_CDR3(clean_seq, mincys)
+    ## display also natural CDR3 without removing the variants
+    CDR3_nature, start_nature, end_nature, prod_nature = get_CDR3(fasta.upper(), mincys)
+    ## decide CDR3
+    
+    if not prod_nature:
+        productivity = 'not productive'
+    
+    return CDR3_nature, start_nature, end_nature, prod_nature   
+

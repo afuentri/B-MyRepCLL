@@ -1,0 +1,39 @@
+########################################
+# Program: water
+# Rundate: Tue 15 Oct 2019 21:49:53
+# Commandline: water
+#    -asequence /media/scratch/aft_projects_tmp/python3_myenv/test/results/CDR3_fastas/IGH-MIX3-clonal-control_IGHV3-13-01_IGHJ6-02-fb.fasta
+#    -bsequence /dev/fd/63
+#    -gapopen 10.0
+#    -gapextend 0.5
+#    -outfile /media/scratch/aft_projects_tmp/python3_myenv/test/CDR3_blast/IGH-MIX3-clonal-control_IGHV3-13-01_IGHJ6-02-fb-IGHD-EW_IGHD2-2-02.water
+#    -aformat3 pair
+# Align_format: pair
+# Report_file: /media/scratch/aft_projects_tmp/python3_myenv/test/CDR3_blast/IGH-MIX3-clonal-control_IGHV3-13-01_IGHJ6-02-fb-IGHD-EW_IGHD2-2-02.water
+########################################
+
+#=======================================
+#
+# Aligned_sequences: 2
+# 1: 1
+# 2: IGHD2-2-02
+# Matrix: EDNAFULL
+# Gap_penalty: 10.0
+# Extend_penalty: 0.5
+#
+# Length: 33
+# Identity:      19/33 (57.6%)
+# Similarity:    19/33 (57.6%)
+# Gaps:          11/33 (33.3%)
+# Score: 49.0
+# 
+#
+#=======================================
+
+1                 85 GCTATTG-----GTA-CTGCTGGTGACACATAC    111
+                     |.|||||     ||| |.||||.|     ||||
+IGHD2-2-02         3 gatattgtagtagtaccagctgct-----atac     30
+
+
+#---------------------------------------
+#---------------------------------------

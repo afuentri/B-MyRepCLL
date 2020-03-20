@@ -1,0 +1,63 @@
+########################################
+# Program: water
+# Rundate: Wed 16 Oct 2019 23:46:45
+# Commandline: water
+#    -asequence /media/scratch/aft_projects_tmp/pigh/test/results/homology/IGHV3-7-01.fa
+#    -bsequence /media/scratch/aft_projects_tmp/pigh/test/results/consensus_complete/IGH-MIX3-clonal-control_IGHV3-7-01_IGHJ6-02-fb.fa
+#    -gapopen 10.0
+#    -gapextend 0.5
+#    -outfile /media/scratch/aft_projects_tmp/pigh/test/results/homology/IGH-MIX3-clonal-control/IGH-MIX3-clonal-control_IGHV3-7-01_IGHJ6-02-fb.water
+#    -aformat3 pair
+# Align_format: pair
+# Report_file: /media/scratch/aft_projects_tmp/pigh/test/results/homology/IGH-MIX3-clonal-control/IGH-MIX3-clonal-control_IGHV3-7-01_IGHJ6-02-fb.water
+########################################
+
+#=======================================
+#
+# Aligned_sequences: 2
+# 1: IGHV3-7-01
+# 2: IGHV3-7-01_IGHJ6-02
+# Matrix: EDNAFULL
+# Gap_penalty: 10.0
+# Extend_penalty: 0.5
+#
+# Length: 312
+# Identity:     293/312 (93.9%)
+# Similarity:   293/312 (93.9%)
+# Gaps:          17/312 ( 5.4%)
+# Score: 1420.0
+# 
+#
+#=======================================
+
+IGHV3-7-01         1 gaggtgcagctggtggagtctgggggaggcttggtccagcctggggggtc     50
+                     ||||||||||||||||||||||||||||||||||||||||||||||||||
+IGHV3-7-01_IG      1 gaggtgcagctggtggagtctgggggaggcttggtccagcctggggggtc     50
+
+IGHV3-7-01        51 cctgagactctcctgtgcagcctctggattcacctttagtagctattgga    100
+                     ||||||||||||||||||||||||||||||||||||||||||||||||||
+IGHV3-7-01_IG     51 cctgagactctcctgtgcagcctctggattcacctttagtagctattgga    100
+
+IGHV3-7-01       101 tgagctgggtccgccaggctccagggaaggggctggagtgggtggccaac    150
+                     ||||||||||||||||||||||||||||||||||||||||||||||||||
+IGHV3-7-01_IG    101 tgagctgggtccgccaggctccagggaaggggctggagtgggtggccaac    150
+
+IGHV3-7-01       151 ataaagcaagatggaagtgagaaatactatgtggactctgtgaagggccg    200
+                     ||||||||||||||||||||||||||||||||||||||||||||||||||
+IGHV3-7-01_IG    151 ataaagcaagatggaagtgagaaatactatgtggactctgtgaagggccg    200
+
+IGHV3-7-01       201 attcaccatctccagagacaacgccaagaactcactgtatctgcaaatga    250
+                     ||||||||||||||||||||||||||||||||||||||||||||||||||
+IGHV3-7-01_IG    201 attcaccatctccagagacaacgccaagaactcactgtatctgcaaatga    250
+
+IGHV3-7-01       251 ac--------------agc-ctgaga--gccgaggacacggctgtgtatt    283
+                     ||              ||| |||.||  ||||.|||||||||||||||||
+IGHV3-7-01_IG    251 actctccctgaagttgagctctgtgaacgccgcggacacggctgtgtatt    300
+
+IGHV3-7-01       284 actgtgcgagag    295
+                     ||||||||||||
+IGHV3-7-01_IG    301 actgtgcgagag    312
+
+
+#---------------------------------------
+#---------------------------------------

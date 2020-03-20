@@ -1,0 +1,7 @@
+Found possible ORF in position 0:
+EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYDMHWVRQATGKGLEWVSAIGTAGDTYYPGSVKGRFTISRENAKNSLYLQMNSP#
+Found Cys for CDR3 start in position 21 and motive WGXG for CDR3 end in position 85.Cys found in positions [] and WGXG found in positions []
+Found possible ORF in position 0:
+
+Found Cys for CDR3 start in position  and motive WGXG for CDR3 end in position .Cys found in positions [] and WGXG found in positions []
+The range of CDR3 in the nucleotide sequence is -

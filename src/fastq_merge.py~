@@ -1,0 +1,212 @@
+#! /usr/env/python3.5                       #
+# Azahara Maria Fuentes Trillo              #
+# Unidad de Genomica y Diagnostico Genetico #
+# INCLIVA                                   #
+# 2018-04-11                                #
+#############################################
+
+# Import modules
+import time
+import sys
+import argparse
+import os
+import logging as log
+import string
+import gzip
+import subprocess
+import re
+from log_manager import log_setup
+import software_paths
+from dir_management import *
+
+repo = os.environ['scripts_repo']
+# import the module
+import fastq_unifier
+
+def execute(cmd):
+
+    """Execute shell command"""
+    subprocess.call([cmd], shell=True)
+
+
+def find_fastqs(directory, out, exclude, name):
+
+    """Find all the FASTQ files inside a directory"""
+    check_directory(directory)
+    check_empty(directory)
+    fof = os.path.join(out, name)
+    if exclude == 'None':
+        cmd = 'find {} -name *.f*q* > {}'.format(directory, fof) 
+    else:
+        cmd = 'find {} -name *.f*q* | grep -v {} > {}'.format(directory, exclude, fof)
+        
+    return cmd, fof
+
+
+def is_fastq(fastq):
+
+    """Detect FASTQ names"""
+    if fastq.endswith('.fastq') or fastq.endswith('.fastq.gz') or fastq.endswith('.fq') or fastq.endswith('.fq.gz'):
+        return True
+    else:
+        return False
+
+
+def create_merge_cmd(merge, out, cdate):
+    
+    """"""
+    table_name = str(cdate) + '-merge_table.csv'
+    table_path = os.path.join(out, table_name)
+    ftable = open_file(table_path, mode ='add')
+    out_file = os.path.join(out, os.path.basename(merge.split(';')[0]))
+    fqs = str(' '.join(merge.split(';')))
+    CMD = 'zcat {} | gzip > {}'.format(fqs, out_file)
+    ftable.write(merge.replace(';',',') + ',' + out_file + '\n')
+    ftable.close()
+    return CMD
+
+
+def create_mergecheck_cmd(merge, out, cdate):
+
+    """"""
+    out_file = os.path.join(out, os.path.basename(merge.split(';')[0]))
+    fqs = str(' '.join(merge.split(';')))
+    wrong_name = str(cdate) + '-wrongmerge.txt'
+    wrong_file_path = os.path.join(out, wrong_name)
+    CMD = 'n1=$(zcat {0} | wc -l); n2=$(zcat {1} | wc -l); if [ $n1 -eq $n2 ]; then echo \"Merge was correct for sample {1}\"; else echo \"{1}\" >> {2}; fi'.format(fqs, out_file, wrong_file_path)
+
+    return CMD
+
+
+def input_fastqs(fastqs_folder, out_folder, exclud, cdate):
+
+    """"""
+    # Input data
+    check_directory(out_folder) # Global variable
+    fastq_fof_path = os.path.join(out_folder, 'fof')
+    create_dir(fastq_fof_path)
+    log.debug('Creating dir for fof files %s', fastq_fof_path)
+    fastqs_fof = str(cdate) + '-fastqs.fof'
+    fastq_fof_cmd, fof_path = find_fastqs(fastqs_folder, fastq_fof_path, exclud, fastqs_fof)
+    log.debug('Creating fof for FASTQ files inside %s', fastq_fof_path)
+    execute(fastq_fof_cmd)
+    
+    return fastq_fof_path, fof_path
+
+
+def check_type_fastq(fof_path):
+
+    """"""
+    ## Read fof to list
+    fastq_list = read_file_simply(fof_path)
+    log.debug('The FASTQ files list specified is %s', ';'.join(fastq_list))
+    ## check end (to function)
+    if '' in fastq_list: # remove blank lines
+        fastq_list.remove('')
+    for fastq in fastq_list:
+        if is_fastq(fastq):
+            log.debug('The file %s specified is a FASTQ', fastq)
+        else:
+            log.warning('The file %s specified is not a FASTQ, removing this path from the FASTQ fof', fastq)
+            fastq_list.remove(fastq)
+
+    return fastq_list
+
+
+def create_pairs_file(pairs, out_folder, name):
+
+    """"""
+    pairs_path = os.path.join(out_folder, name)
+    fpairs = open_file(pairs_path, mode='write')
+    fpairs.write('\n'.join(pairs) + '\n')
+    fpairs.close()
+
+    return pairs_path
+
+
+def prepare_merge_input(fastq_fof_path, out_folder, cdate, mfolder):
+
+    """"""
+    CMD_merge = str(cdate) + '-CMD-merge.cmd'
+    # check if merge is empty or not
+    merge_fof_name = str(cdate) + '-merge.fof'
+    merge_fof_cmd, merge_fof_path = find_fastqs(mfolder, fastq_fof_path, 'None', merge_fof_name)
+    execute(merge_fof_cmd)
+
+    return merge_fof_path, CMD_merge
+
+
+def merge(merge_fof_path, merged_folder, CMD_merge, merge_list, cdate, proc):
+
+    """"""
+    merge_fastq_list = read_file_simply(merge_fof_path)
+    if '' in merge_fastq_list:
+        merge_fastq_list.remove('')
+    if len(merge_fastq_list) == 0:
+        log.warning('There are no FASTQ files in folder merge %s. Proceed to FASTQ files merge.', merged_folder)
+        # create merge CMD
+        CMD_merge_path = os.path.join(merged_folder, CMD_merge)
+        fmerge = open_file(CMD_merge_path, mode='add')
+        for m in merge_list:
+            merge_cmd = create_merge_cmd(m, merged_folder, cdate)
+            fmerge.write(merge_cmd + '\n')
+        fmerge.close()
+
+        ## LOG path
+        LOG_merge = str(cdate) + '-LOG-merge.log'
+        LOG_merge_path = os.path.join(merged_folder, LOG_merge)
+        ## Parallel
+        parallel_merge = "cat {} | parallel --joblog {} -j{}".format(CMD_merge_path, LOG_merge_path, proc)
+        execute(parallel_merge)
+
+    else:
+        log.warning('There are already FASTQ files in folder merge %s. Remove them if you want to perform FASTQ merge', merged_folder)
+
+        
+def merge_checking(merge_list, merged_folder, cdate, proc):
+
+    """"""
+    CMD_merge_check = str(cdate) + '-CMD-mergecheck.cmd'
+    CMD_mergecheck_path = os.path.join(merged_folder, CMD_merge_check)
+    fcheck = open_file(CMD_mergecheck_path, mode='add')
+    for m in merge_list:
+        check_merge_cmd = create_mergecheck_cmd(m, merged_folder, cdate)
+        fcheck.write(check_merge_cmd + '\n')
+
+    # execute check_merge_cmd
+    LOG_mergecheck = str(cdate) + '-LOG-mergecheck.log'
+    LOG_mergecheck_path = os.path.join(merged_folder, LOG_mergecheck)
+    parallel_mergecheck = 'cat {} | parallel --joblog {} -j{}'.format(CMD_mergecheck_path, LOG_mergecheck_path, proc)
+    log.warning('Due to a bug in this script we do not know how to solve yet, please copy the following line in your shell and press enter:\n%s', parallel_mergecheck)
+    execute(parallel_mergecheck)
+
+            
+def whole_merging_process(fastqs_folder, out_folder, proc, cdate, exclud):
+    
+    """The whole merging process"""
+    # Gather raw data (FASTQ files)
+    fastq_fof_path, fof_path = input_fastqs(fastqs_folder, out_folder, exclud, cdate)
+    # Check that each file in the fof is ending in ".fastq" o ".fq"
+    fastq_list = check_type_fastq(fof_path)
+    # Merge FASTQ files
+    ## group FASTQ files with the same sample_name and read
+    merged_folder = os.path.join(out_folder, 'merged')
+    create_dir(merged_folder)
+    # Get FASTQ files dictionary
+    fastq_d, extensions, d_samplenames, d_samplenames_reads, merge_list, pairs_raw, pairs_trimmed, trimming_io, trim_dict = fastq_unifier.fastq_dictionary(fastq_list, merged_folder)
+    # pairs and trimming txt
+    pair_raw_path = create_pairs_file(pairs_raw, out_folder, 'pairs_raw.csv')
+    pair_trimmed_path = create_pairs_file(pairs_trimmed, out_folder, 'pairs_trimmed.csv')
+    trimming_io_path = create_pairs_file(trimming_io, out_folder, 'trimming_io.csv')
+    
+    # create merge folder
+    merge_fof_path, CMD_merge = prepare_merge_input(fastq_fof_path, out_folder, cdate, merged_folder)
+    
+
+    # merge
+    merge(merge_fof_path, merged_folder, CMD_merge, merge_list, cdate, proc)
+    
+    # merge checking
+    merge_checking(merge_list, merged_folder, cdate, proc)
+
+    return fastq_d, merged_folder, pair_raw_path, pair_trimmed_path, trimming_io_path, extensions
