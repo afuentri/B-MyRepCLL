@@ -80,9 +80,9 @@ def create_CMD(name, folder):
 def process_communicate(CMD):
 
     """Return shell standard output"""
-    proc = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE)
+    proce = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE)
     
-    return proc.communicate()[0].decode("utf-8").split(' ')
+    return proce.communicate()[0].decode("utf-8").split(' ')
 
 
 def removeEmpty(l):
@@ -99,7 +99,8 @@ def write_header(fhand):
 
     """"""
     fhand.write('sample_name,Vregion,reads_mapped,region_length,homology-IGHV'
-                                ',mutational_status,joined,Jregion,J_assigned,J_coincidence,'
+                                ',mutational_status,homology-IGHV_noFR3,mutational_status_noFR3,'
+                                'joined,Jregion,J_assigned,J_coincidence,'
                                 'IGHV-J,consensus_length,CDR3,CDR3_length,IGHD,IGHD_emboss,'
                                 'insertions,deletions,ORF disruption,ori_junction,'
                 'perc_ori_junction,majorproductive_seq,nreads_majorproductive_seq,major_CDR3,major_IGHD,major_prod\n')
@@ -112,7 +113,8 @@ def dhom_write(s, v, k, d_hom):
          ',{},{},{},{},{},{},{},{},{},{},{},'
          '{},{},{}').format(s, v, d_hom[k]['nreads'],
                             d_hom[k]['length'], d_hom[k]['homology'],
-                            d_hom[k]['mutational_status'],';'.join(d_hom[k]['joined']),
+                            d_hom[k]['mutational_status'], d_hom[k]['homology_noFR3'],
+                            d_hom[k]['mutational_status_noFR3'],';'.join(d_hom[k]['joined']),
                             ';'.join(d_hom[k]['Jregion']), d_hom[k]['J_assigned'],
                             d_hom[k]['J_coincidence'],
                             d_hom[k]['IGHV-J'], str(d_hom[k]['consensus_length']),
@@ -319,7 +321,7 @@ def flash(out_folder, trimmed_folder, pairs, CMD, new_pairs):
     return new_pairs, boole
 
 
-def bwamem_alignment(out, trimmed_folder, CMD, pairs, ref):
+def bwamem_alignmentV(out, trimmed_folder, CMD, pairs, ref):
 
     """"""
     fcmd = open_file(CMD, mode='write')
@@ -338,18 +340,18 @@ def bwamem_alignment(out, trimmed_folder, CMD, pairs, ref):
             # paired end mode
             fastq2 = os.path.basename(p[1])
             fastq2_path = os.path.join(trimmed_folder, fastq2)
-            CMD_alignment = ('bwa mem -t4 -M -R '
-                             '\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{5}\\tPU:{0}\" '
-                             '{1} {2} {3} | samtools view -b - | samtools sort -o {4} -').format(sample_name, ref,
+            CMD_alignment = ("bwa mem -t4 -M -R "
+                             "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{5}\\tPU:{0}\" "
+                             "{1} {2} {3} | awk '$6 !~ \"S\" {{ print }} ' | samtools view -b - | samtools sort -o {4} -").format(sample_name, ref,
                                                                                                  fastq1_path, 
                                                                                                  fastq2_path, 
                                                                                                  bam_path, cdate)
 
         else:
             # single end mode
-            CMD_alignment = ('bwa mem -t4 -M -R '
-                             '\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{4}\\tPU:{0}\" '
-                             '{1} {2} | samtools view -b - | samtools sort -o {3} -').format(sample_name,
+            CMD_alignment = ("bwa mem -t4 -M -R "
+                             "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{4}\\tPU:{0}\" "
+                             "{1} {2} | awk '$6 !~ \"S\" {{ print }} ' | samtools view -b - | samtools sort -o {3} -").format(sample_name,
                                                                                              ref, fastq1_path, 
                                                                                              bam_path, cdate)
 
@@ -357,6 +359,45 @@ def bwamem_alignment(out, trimmed_folder, CMD, pairs, ref):
 
     fcmd.close()
 
+def bwamem_alignmentJ(out, trimmed_folder, CMD, pairs, ref):
+
+    """"""
+    fcmd = open_file(CMD, mode='write')
+    pairs_list = read_file_simply(pairs)
+    for pair in pairs_list:
+        p = pair.split(';')
+        fastq1 = os.path.basename(p[0])
+        sample_name = fastq1.split('_')[0]
+
+
+        fastq1_path = os.path.join(trimmed_folder, fastq1)
+        sortedbam_name = sample_name + '-sorted.bam'
+        bam_path = os.path.join(out, sortedbam_name)
+
+        if len(p) > 1:
+            # paired end mode                                                                                                                                                                                  
+            fastq2 = os.path.basename(p[1])
+            fastq2_path = os.path.join(trimmed_folder, fastq2)
+            CMD_alignment = ("bwa mem -t4 -M -R "
+                             "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{5}\\tPU:{0}\" "
+                             "{1} {2} {3} | samtools view -b - | samtools sort -o {4} -").format(sample_name, ref,
+                                                                                                 fastq1_path,
+                                                                                                 fastq2_path,
+                                                                                                 bam_path, cdate)
+
+        else:
+            # single end mode                                                                                                                                                                                  
+            CMD_alignment = ("bwa mem -t4 -M -R "
+                             "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{4}\\tPU:{0}\" "
+                             "{1} {2} | samtools view -b - | samtools sort -o {3} -").format(sample_name,
+                                                                                             ref, fastq1_path,
+                                                                                             bam_path, cdate)
+
+        fcmd.write(CMD_alignment + '\n')
+
+    fcmd.close()
+
+    
 
 def bams_list(out, pairs):
 
@@ -424,7 +465,7 @@ def list_vcfs(bams, folder):
 def parallel(CMD, p, LOG): ## make independent function with execute
 
     """"""
-    parallel = 'parallel --joblog {} -j {} :::: {}'.format(LOG, p, CMD)
+    parallel = 'parallel --compress --joblog {} -j {} :::: {}'.format(LOG, p, CMD)
     execute(parallel)
 
 
@@ -505,7 +546,7 @@ def prepare_trimming(out_folder, fastq_dictionary, merged_folder,
             seqtk_quality_trimming(fastq_dictionary, out_folder, merged_folder, 
                                    path_CMD_trimming)
         elif prog == 'bbduk':
-            if mode == 'left':
+            if mode == 'left' and sides:
                 path_CMD_trimming = path_CMD_trimming.replace('trimming', 'trimming5')
                 path_LOG_trimming = path_LOG_trimming.replace('trimming', 'trimming5')
             
@@ -646,7 +687,10 @@ def prepare_alignment(out_folder, trimmed_folder, pairs, ref):
         log.debug('Starting FASTQ alignment. Out folder %s', out_folder)
         path_CMD_alignment, path_LOG_alignment = create_CMD('alignment', out_folder)
         bam_list = bams_list(out_folder, pairs)
-        bwamem_alignment(out_folder, trimmed_folder, path_CMD_alignment, pairs, ref)
+        if 'bamsV' in out_folder:
+            bwamem_alignmentV(out_folder, trimmed_folder, path_CMD_alignment, pairs, ref)
+        elif 'bamsJ' in out_folder:
+            bwamem_alignmentJ(out_folder, trimmed_folder, path_CMD_alignment, pairs, ref)
         p = int(int(proc)/4) # consider inner threading bwa mem
         parallel(path_CMD_alignment, p, path_LOG_alignment)
         path_CMD_bamindex, path_LOG_bamindex = create_CMD('bamindex', out_folder)
@@ -1150,7 +1194,7 @@ def consensus_sequenceV(ref, ref_dict, out, bam_path, vcf_folder, refV, sample, 
     return fasta_path_freebayes
 
 
-def consensus_sequence_complete(ref, out, folder_references, bam, sample_name, fcmd, out_vcfs):
+def consensus_sequence_complete(ref, ref2, out, folder_references, bam, sample_name, fcmd, out_vcfs):
 
     """"""
     # Reference extraction
@@ -1158,7 +1202,7 @@ def consensus_sequence_complete(ref, out, folder_references, bam, sample_name, f
 
     # Paths and commands
     ## consensus files
-    fasta_consensus_name_freebayes = sample_name + '_' + ref + '-fb.fa'
+    fasta_consensus_name_freebayes = sample_name + '_' + ref2 + '-fb.fa'
     fasta_path_freebayes = os.path.join(out, fasta_consensus_name_freebayes)
 
     # Consensus sequence
@@ -1199,7 +1243,8 @@ def homology(ref_dict, consensus_path, fcmd_homology, sample_name, homology_fold
     return out_path
 
 
-def homology_parsing(alignment_list, d, g):
+
+def homology_parsing(alignment_list, d, g, field, field2):
 
     """Parse EMBOSS water format 'pair' from a list of paths"""
     for path in alignment_list:
@@ -1213,8 +1258,7 @@ def homology_parsing(alignment_list, d, g):
                 k = '{}_{}'.format(k.split('_')[0].replace('123456789',
                                                            '-'), k.split('_')[1])
                 print(k)
-            field = 'homology'
-            field2 = 'mutational_status'
+        
      
         if k in d:
         
@@ -1244,16 +1288,16 @@ def homology_parsing(alignment_list, d, g):
 
     ## include empty homology for samples in dictionary without homology data
     for r in d.keys():
-        if not 'homology' in d[r]:
-            d[r]['homology'] = ''
-        if not 'mutational_status' in d[r]:
-            d[r]['mutational_status'] = ''
+        if not field in d[r]:
+            d[r][field] = ''
+        if not field2 in d[r]:
+            d[r][field2] = ''
     print(g)
     for r in g.keys():
-        if not 'homology' in g[r]:
-            g[r]['homology'] = ''
-        if not 'mutational_status' in g[r]:
-            g[r]['mutational_status'] = ''
+        if not field in g[r]:
+            g[r][field] = ''
+        if not field2 in g[r]:
+            g[r][field2] = ''
 
     return d, g
 
@@ -1270,8 +1314,8 @@ def joined_annotation(d_hom, g_hom, path_list):
                 reg = k.split('_')[1]
 
                 CMD = 'grep "{}" {} | grep -v "None"'.format(reg, path)
-                proc = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE)
-                out = proc.communicate()[0].decode("utf-8").split('\n')
+                proce = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE)
+                out = proce.communicate()[0].decode("utf-8").split('\n')
                 
                 l = []
 
@@ -1656,7 +1700,7 @@ def subset_merge(d, g, CMD_subset, CMD_merge, out, out_merged,
         refJ = d[e]['J_assigned'].strip()
         VJgene = '{}-gene_{}'.format(geneV, refJ)
         bamname = '{}-sorted.bam'.format(sample)
-
+        
         # subset IGHV
         if refV != '' and refV not in vr:
             vr.append(refV)
@@ -1719,7 +1763,7 @@ def subset_merge(d, g, CMD_subset, CMD_merge, out, out_merged,
                 
                 l_merged.append(out_merged_path)
                 fCMD_merge.write(merge + '\n')
-
+                
     return l_merged
 
 
@@ -1796,12 +1840,12 @@ def consensus_sequence_annotation(dictionary, g, fasta_path, tag):
     return dictionary
  
 
-def prepare_complete_consensus(list_bams, out_folder, folder_vcfs, 
+def prepare_complete_consensus(tag, list_bams, out_folder, folder_vcfs, 
                                folder_rearrangement_references):
     
     """"""
     # iterate in d_hom
-    overwrite = do_overwrite(out_folder, '.fa')
+    overwrite = do_overwrite(out_folder, tag + '.fa')
     consensus_sequences = []
     vcfs = []
     if overwrite:
@@ -1813,8 +1857,9 @@ def prepare_complete_consensus(list_bams, out_folder, folder_vcfs,
         for bam in list_bams:
             out_name = os.path.basename(bam).replace('-sorted.bam','')
             sample_name = out_name.split('_')[0]
-            current_ref = '_'.join(out_name.split('_')[1:])
-            consensus_path_fb, vcf_path = consensus_sequence_complete(current_ref, out_folder, 
+            current_ref = '_'.join(out_name.split('_')[1:]).replace('-noFR3', '')
+            complete_ref = '_'.join(out_name.split('_')[1:])
+            consensus_path_fb, vcf_path = consensus_sequence_complete(current_ref, complete_ref, out_folder, 
                                                                       folder_rearrangement_references, bam, 
                                                                       sample_name, fcmd, folder_vcfs)
 
@@ -1830,8 +1875,8 @@ def prepare_complete_consensus(list_bams, out_folder, folder_vcfs,
     else:
         log.warning('There are already consensus sequences files in %s. '
                     'Use mode overwrite if you want to overwrite the existing file.', out_folder)
-        consensus_sequences = glob.glob(str(out_folder) + '/*.fa')
-        vcfs = glob.glob(str(folder_vcfs) + '/*.vcf.gz')
+        consensus_sequences = glob.glob(str(out_folder) + ('/*' + tag + '*.fa'))
+        vcfs = glob.glob(str(folder_vcfs) + (tag + '/*' + tag + '*.vcf.gz'))
 
 
     return consensus_sequences, vcfs
@@ -1982,35 +2027,61 @@ def uniq_fastq(fastq):
     new.close()
 
 
+def remove_FR3(BAM, f):
+
+    """"""
+    out_BAM = BAM.replace('-sorted.bam', '-noFR3-sorted.bam')
+    ref = '_'.join(os.path.basename(BAM).split('_')[1:]).replace('-sorted.bam', '')
+    CMD = 'samtools view {0} -F16 {1}:1-200 -b -o {2}; samtools index {2}'.format(BAM, ref, out_BAM)
+    f.write(CMD + '\n')
+
+    return out_BAM
+    
+    
 def specific_rearrangement_mapping(l, out, ref_dict, out_ref, g):
 
     """"""
     overwrite = do_overwrite(out, '.bam')
     if overwrite:
         list_bams = []
+        list_bams_noFR3 = []
         log.debug('Starting mapping for specific rearrangements. Out folder %s', out)
         path_CMD_mapping, path_LOG_mapping = create_CMD('specific-mapping', out)
+        path_CMD_removeFR3, path_LOG_removeFR3 = create_CMD('remove-FR3', out)
         fcmd = open_file(path_CMD_mapping, mode='write')
+        fcmd2 = open_file(path_CMD_removeFR3, mode='write')
         for fastq in l:
             uniq_fastq(fastq)
             bam_name = specific_rearrangement_bwamem(fastq, out, fcmd, ref_dict, out_ref, g)
             list_bams.append(bam_name)
 
+            ## create BAM without FR3
+            bam_noFR3_name = remove_FR3(bam_name, fcmd2)
+            list_bams_noFR3.append(bam_noFR3_name)
+
         fcmd.close()
-        parallel(path_CMD_mapping, int(int(proc)/4), path_LOG_mapping)
+        fcmd2.close()
+        if len(list_bams) >= 4:
+            j = int(int(proc)/4)
+        else:
+            j = proc
+        parallel(path_CMD_mapping, j, path_LOG_mapping)
+        parallel(path_CMD_removeFR3, proc, path_LOG_removeFR3)
+        
     else:
         log.warning('There are BAM files inside %s. Use mode overwrite if you '
                     'want to create BAM files in this folder', out)
-        list_bams = glob.glob(str(out) + '/*.bam') 
+        list_bams = glob.glob(str(out) + '/*[!noFR3]-sorted.bam')
+        list_bams_noFR3 = glob.glob(str(out) + '/*-noFR3-sorted.bam')        
 
-    return list_bams
+    return list_bams, list_bams_noFR3
 
 
 def sequences_overlap(s1, s2):
 
     """"""
     d = difflib.SequenceMatcher(None, s1, s2)
-    match = max(d.get_matching_blocks(),key=lambda x:x[2])
+    match = max(d.get_matching_blocks(), key=lambda x:x[2])
     i, j, k = match
     #i: pos where match starts in s1
     #j: pos where match starts in s1
@@ -2039,8 +2110,8 @@ def finding_new_junction(file_reads, vcf_complete_path, bam, refV_seq):
     CMD3 = ('samtools view {0} -F4 | cut -f10 | sort | uniq -c | sort -n > {1};'
             'cat {1} | tail -n 1').format(bam, file_reads)
     
-    proc = subprocess.Popen(CMD3, shell=True, stdout=subprocess.PIPE)
-    ns = proc.communicate()[0].strip().split()
+    proce = subprocess.Popen(CMD3, shell=True, stdout=subprocess.PIPE)
+    ns = proce.communicate()[0].strip().split()
     ## if BAM file is empty we do not do this
     if len(ns) > 1:
         major_readn, major_read = ns
@@ -2114,8 +2185,6 @@ def bams_specific_read(list_bams, out, junctiond, vcf_folder, homology_folder, V
             knam, refv, rest = os.path.basename(BAM).split('_')
             kname = '{}_{}'.format(knam, refv)
             vcf_incomplete_path = os.path.join(vcf_folder, kname)
-            print('caca')
-            print(vcf_incomplete_path)
             vcf_complete_path = glob.glob(vcf_incomplete_path + '*.vcf.gz')[0]
             refV_seq = Vdict[refv]
             refJ = rest.replace('-sorted.bam','')
@@ -2188,8 +2257,8 @@ def CDR3_short_blast(out_blast, fastq, sample_name, fcmd):
     ## blast files
     ## check first if IGHD is empty
     CMD2 = 'wc -l {}'.format(fastq)
-    proc = subprocess.Popen(CMD2, shell=True, stdout=subprocess.PIPE)
-    out = proc.communicate()[0].decode("utf-8").split(' ')[0]
+    proce = subprocess.Popen(CMD2, shell=True, stdout=subprocess.PIPE)
+    out = proce.communicate()[0].decode("utf-8").split(' ')[0]
     # if IGHD fasta is empty, we use complete CDR3 sequence
     if out == '0':
         fastq = fastq.replace('-IGHD', '')
@@ -2208,14 +2277,14 @@ def CDR3_emboss(out_emboss, fastq, fcmd, refD, emboss_files):
         out_file = '{}_{}.water'.format(out_emboss, nameD)
         ## check first if IGHD is empty
         CMD2 = 'wc -l {}'.format(fastq)
-        proc = subprocess.Popen(CMD2, shell=True, stdout=subprocess.PIPE)
-        out = proc.communicate()[0].decode("utf-8").split(' ')[0]
+        proce = subprocess.Popen(CMD2, shell=True, stdout=subprocess.PIPE)
+        out = proce.communicate()[0].decode("utf-8").split(' ')[0]
         # if IGHD fasta is empty, we use complete CDR3 sequence
         if out == '0':
             fastq = fastq.replace('-IGHD', '')
             CMD2 = 'wc -l {}'.format(fastq)
-            proc = subprocess.Popen(CMD2, shell=True, stdout=subprocess.PIPE)
-            out = proc.communicate()[0].decode("utf-8").split(' ')[0]
+            proce = subprocess.Popen(CMD2, shell=True, stdout=subprocess.PIPE)
+            out = proce.communicate()[0].decode("utf-8").split(' ')[0]
             # if both IGHD and CDR3 fasta are empty, the loop for that rearrangement will be interrupted
             if out == '0':
                 break
@@ -2517,8 +2586,9 @@ def main():
     if args.primers:
         adapters = args.primers
         trimmed5_folder = os.path.join(trimmed_folder, 'trimmed5')
-        create_dir(trimmed5_folder)
+        
         if args.sides:
+            create_dir(trimmed5_folder)
             prepare_trimming(trimmed5_folder, fastq_dictionary, merged_folder,fastqs_folder, 
                              ext, pairs_raw, adapters, args.sides)
             prepare_trimming(trimmed_folder, fastq_dictionary, trimmed5_folder, fastqs_folder, 
@@ -2739,24 +2809,31 @@ def main():
         ## Dict from VJ fasta reference file
         refVJ_dict = VJref_dictionary(refVJ)
         list_merged2fastq = merged2fastq(list_merged, merged2fastqs_folder)
-        list_spec_bams = specific_rearrangement_mapping(list_merged2fastq, specific_mapping,
+        list_spec_bams, list_spec_noFR3_bams = specific_rearrangement_mapping(list_merged2fastq, specific_mapping,
                                                         refVJ_dict, rearrangement_refs, g_hom)
         
         # include step for vcf parsing for indels
-        consensus_complete_list, vcfs_complete_list = prepare_complete_consensus(list_spec_bams,
+        consensus_complete_list, vcfs_complete_list = prepare_complete_consensus('', list_spec_bams,
                                                                                  consensus_complete,
                                                                                  folder_completevcfs,
                                                                                  rearrangement_refs)
 
         vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_list, 'variants')
         
+        consensus_complete_list_noFR3, vcfs_complete_list_noFR3 = prepare_complete_consensus('-noFR3', list_spec_noFR3_bams,
+                                                                                  consensus_complete,
+                                                                                  folder_completevcfs,
+                                                                                  rearrangement_refs)
+        vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_list_noFR3, 'variants')
     
     ## Consensus sequence and local alignment against the reference alleles using EMBOS water
     water_list = mutationalStatus(consensus_complete_list, homology_folder, ref_dict)
+    water_list2 = mutationalStatus(consensus_complete_list_noFR3, homology_folder, ref_dict)
     ## Parsing homology data and adding the value to dictionary
     ## We will use water_list to open each alignment file and parse EMBOSS
     ## water output to add the homology result to the final table
-    d_hom, g_hom = homology_parsing(water_list, d_hom, g_hom)
+    d_hom, g_hom = homology_parsing(water_list, d_hom, g_hom, 'homology', 'mutational_status')
+    d_hom, g_hom = homology_parsing(water_list2, d_hom, g_hom, 'homology_noFR3', 'mutational_status_noFR3')
     print(d_hom)
     prepare_consensus_sequence_annotation(d_hom, g_hom, consensus_complete_list)
 
