@@ -14,12 +14,12 @@ import os
 import logging as log
 import string
 import gzip
-import subprocess
 import re
 import matplotlib
 import glob
 import glob2
 import difflib
+import subprocess
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
@@ -98,7 +98,8 @@ def removeEmpty(l):
 def write_header(fhand):
 
     """"""
-    fhand.write('sample_name,Vregion,reads_mapped,region_length,homology-IGHV'
+    fhand.write('sample_name,Vregion,reads_mapped,reads_mapped_leader,reads_mapped_fr1,'
+                'reads_mapped_fr2,reads_mapped_fr3,region_length,homology-IGHV'
                                 ',mutational_status,homology-IGHV_noFR3,mutational_status_noFR3,'
                                 'joined,Jregion,J_assigned,J_coincidence,'
                                 'IGHV-J,consensus_length,CDR3,CDR3_length,IGHD,IGHD_emboss,'
@@ -111,7 +112,8 @@ def dhom_write(s, v, k, d_hom):
     """Write hom output dict fields to tabular"""
     l = ('{},{},{},{},{},{},{},{},{},{},{},{}'
          ',{},{},{},{},{},{},{},{},{},{},{},'
-         '{},{},{}').format(s, v, d_hom[k]['nreads'],
+         '{},{},{}').format(s, v, d_hom[k]['nreads'], d_hom[k]['nreads_leader'],
+                            d_hom[k]['nreads_fr1'], d_hom[k]['nreads_fr2'], d_hom[k]['nreads_fr3'],
                             d_hom[k]['length'], d_hom[k]['homology'],
                             d_hom[k]['mutational_status'], d_hom[k]['homology_noFR3'],
                             d_hom[k]['mutational_status_noFR3'],';'.join(d_hom[k]['joined']),
@@ -335,25 +337,43 @@ def bwamem_alignmentV(out, trimmed_folder, CMD, pairs, ref):
         fastq1_path = os.path.join(trimmed_folder, fastq1)
         sortedbam_name = sample_name + '-sorted.bam'
         bam_path = os.path.join(out, sortedbam_name)
-
+        tempbam_path = bam_path.replace('-sorted.bam', '-tempsorted.bam')
+        sam = tempbam_path.replace('.bam', '.sam')
         if len(p) > 1:
             # paired end mode
             fastq2 = os.path.basename(p[1])
             fastq2_path = os.path.join(trimmed_folder, fastq2)
+            #CMD_alignment = ("bwa mem -t4 -M -R "
+            #                 "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{5}\\tPU:{0}\" "
+            #                 "{1} {2} {3} | samtools view -b - | samtools sort -o {4} -").format(sample_name, ref,
+            #                                                                                      fastq1_path,
+            #                                                                                      fastq2_path,
+            #                                                                                      bam_path, cdate)
+            
+            ## filter FR3 reads
             CMD_alignment = ("bwa mem -t4 -M -R "
                              "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{5}\\tPU:{0}\" "
-                             "{1} {2} {3} | awk '$6 !~ \"S\" {{ print }} ' | samtools view -b - | samtools sort -o {4} -").format(sample_name, ref,
-                                                                                                 fastq1_path, 
-                                                                                                 fastq2_path, 
-                                                                                                 bam_path, cdate)
+                             "{1} {2} {3} | samtools view -b -o {7}; samtools view -H {7} > {6}; samtools view {7} | awk ' {{ if ($4 >= 200) print }} ' >> {6};"
+                             "samtools view {7} | awk  ' {{ if ($4 < 200 && $6 !~ \"S\") print }} ' >> {6}; samtools view -b {6} | samtools sort -o {4} -; rm {6}; rm {7}").format(sample_name, ref,
+                                                                                                 fastq1_path,
+                                                                                                 fastq2_path,                                                                                                                                                                                                  bam_path, cdate,
+                                                                                                 sam, tempbam_path)
 
         else:
             # single end mode
+            #CMD_alignment = ("bwa mem -t4 -M -R "
+            #                 "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{4}\\tPU:{0}\" "
+            #                 "{1} {2} |samtools view -b - | samtools sort -o {3} -").format(sample_name,
+            #                                                                                ref, fastq1_path,
+            #                                                                                bam_path, cdate)
+            ## filter FR3 reads
             CMD_alignment = ("bwa mem -t4 -M -R "
                              "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{4}\\tPU:{0}\" "
-                             "{1} {2} | awk '$6 !~ \"S\" {{ print }} ' | samtools view -b - | samtools sort -o {3} -").format(sample_name,
+                             "{1} {2} | samtools view -b -o {6}; samtools view -H {6} > {5}; samtools view {6} | awk ' {{ if ($4 >= 200) print }} ' >> {5};"
+                             "samtools view {6} | awk  ' {{ if ($4 < 200 && $6 !~ \"S\") print }} ' >> {5}; samtools view -b {5} | samtools sort -o {3} -; rm {5}; rm {6}").format(sample_name,
                                                                                              ref, fastq1_path, 
-                                                                                             bam_path, cdate)
+                                                                                             bam_path, cdate,
+                                                                                             sam, tempbam_path)
 
         fcmd.write(CMD_alignment + '\n')
 
@@ -465,7 +485,7 @@ def list_vcfs(bams, folder):
 def parallel(CMD, p, LOG): ## make independent function with execute
 
     """"""
-    parallel = 'parallel --compress --joblog {} -j {} :::: {}'.format(LOG, p, CMD)
+    parallel = 'parallel --compress --joblog {} -j {} --tmpdir {} :::: {}'.format(LOG, p, TMPDIR, CMD)
     execute(parallel)
 
 
@@ -974,7 +994,7 @@ def filter_Vregion_basal(regions_listV, bam_listV):
             c[sample_name]['total_counts'] = 0
         for reg in regions_listV:
             if reg.split(',')[0] == sample_name:
-                s, ref, counts, length = reg.split(',')
+                s, ref, counts, length, leader, fr1, fr2, fr3 = reg.split(',')
                 ref = ref.replace('D-','-D') #include D name in the allele field
                 Vgene = '-'.join(ref.split('_')[0].split('-')[:-1])
 
@@ -1002,12 +1022,13 @@ def filter_Vregion_basal(regions_listV, bam_listV):
         for reg in regions_listV:
             if reg.split(',')[0] == sample_name:
 
-                s, ref, counts, length = reg.split(',')
-                ref = ref.replace('D-','-D')#include D name in the allele field
+                s, ref, counts, length, leader, fr1, fr2, fr3 = reg.split(',')
+                ref = ref.replace('D-','-D') #include D name in the allele field
                 Vgene = '-'.join(ref.split('_')[0].split('-')[:-1])
                 if max_allele[sample_name][Vgene].split(';')[0] == ref:
                     counts = c[sample_name][Vgene]
-                    new_gene.append('%s,%s,%s,%s' %(s, ref.replace('-D','D-'), counts, length))
+                    new_gene.append('%s,%s,%s,%s,%s,%s,%s,%s' %(s, ref.replace('-D','D-'), counts, length,
+                                                                leader, fr1, fr2, fr3))
                 perc = (float(c[sample_name][Vgene])/float(c[sample_name]['total_counts']))*100
                 if not Vgene in c_counts_nofilter[sample_name]:
                     c_counts_nofilter[sample_name][Vgene] = perc
@@ -1034,7 +1055,7 @@ def filter_Jregion_basal(regions_listJ, bam_listV):
 
             if reg.split(',')[0] == sample_name:
 
-                s, ref, counts = reg.split(',')
+                s, ref, counts, leader, fr1, fr2, fr3 = reg.split(',')
                 if not sample_name in c:
                     c[sample_name] = int(counts)
                 else:
@@ -1049,7 +1070,7 @@ def filter_Jregion_basal(regions_listJ, bam_listV):
             if c[sample_name] > 0:
                 for reg in regions_listJ:
                     if reg.split(',')[0] == sample_name:
-                        s, ref, counts = reg.split(',')
+                        s, ref, counts, leader, fr1, fr2, fr3 = reg.split(',')
                         perc = (float(counts)/float(c[sample_name]))*100
 
                         if perc >= basal:
@@ -1062,7 +1083,9 @@ def filter_Jregion_basal(regions_listJ, bam_listV):
 
 def d_output_creation():
 
-    d = {'length' : '', 'nreads' : '', 'homology_freebayes' : '',
+    d = {'length' : '', 'nreads' : '', 'nreads_leader' : '',
+         'nreads_fr1' : '', 'nreads_fr2' : '', 'nreads_fr3' : '',
+         'homology_freebayes' : '',
          'mutational_status_freebayes' : '',
          'joined' : '', 'Jregion' : '', 'J_assigned' : '',
          'J_coincidence' : '', 'IGHV-J': '',
@@ -1085,7 +1108,8 @@ def annotate_hom(bam_listV, regions_listJ, regions_listV, d_hom):
             J_region = J_region_annotation(regions_listJ, sample_name)
         for reg in regions_listV:
             if reg.split(',')[0].split('_')[0] == sample_name: ##clonal
-                s, ref, counts, length = reg.split(',')
+                s, ref, counts, length, leader, fr1, fr2, fr3 = reg.split(',')
+                
                 if clonal:
                     J_region = J_region_annotation(regions_listJ, s)
                 # dictionary key comprised by sample name and Vregion
@@ -1095,6 +1119,10 @@ def annotate_hom(bam_listV, regions_listJ, regions_listV, d_hom):
 
                 d_hom[sample_region]['length'] = length
                 d_hom[sample_region]['nreads'] = counts
+                d_hom[sample_region]['nreads_leader'] = leader
+                d_hom[sample_region]['nreads_fr1'] = fr1
+                d_hom[sample_region]['nreads_fr2'] = fr2
+                d_hom[sample_region]['nreads_fr3'] = fr3
                 d_hom[sample_region]['Jregion'] = J_region
 
     return d_hom
@@ -1150,7 +1178,7 @@ def J_region_annotation(regions_listJ, sample):
         l = regions_listJ[m]
 
         if l.split(',')[0] == sample: # clonal
-            name, jref, num = l.split(',')
+            name, jref, num, leader, fr1, fr2, fr3 = l.split(',')
             if int(num) > 0:
                 J[num] = jref
                 n.append(int(num))
@@ -1310,16 +1338,17 @@ def joined_annotation(d_hom, g_hom, path_list):
 
         for k in d_hom:
             if k.split('_')[0] == sample:
-
+                print(k)
                 reg = k.split('_')[1]
 
                 CMD = 'grep "{}" {} | grep -v "None"'.format(reg, path)
                 proce = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE)
                 out = proce.communicate()[0].decode("utf-8").split('\n')
                 
-                l = []
+                l = ''
 
                 n = removeEmpty(out)
+                
                 if len(d_hom[k]['Jregion']) > 0:
                     # check if not Jregion identified
                     if len(n) == 0:
@@ -1328,34 +1357,42 @@ def joined_annotation(d_hom, g_hom, path_list):
                         d_hom[k]['J_coincidence'] = 'no joined info'
                         
                     else:
-                        
+                        d = {}
                         for e in range(len(n)):
 
                             n[e] = n[e].replace('\r','').replace('\e','').strip()
-                            if e == 0:
-                                min_joined_reads = float(d_hom[k]['nreads'])*1/100
-                                if int(n[e].split('\t')[0].split(' ')[0]) >= min_joined_reads:
-                                    m = n[e].split('\t')[1].split(';')[0]
-                                    d_hom[k]['J_assigned'] = m
-                                    # assign IGHJ and determine the coincidence with the
-                                    # joined subtype (overlapping reads between V and J)
-                                    if d_hom[k]['J_assigned'] == d_hom[k]['Jregion'][0].split(' ')[1]:
+                            m = n[e].split('\t')[1].split(';')[0]
+                            co = int(n[e].split('\t')[0].split(' ')[0])
+                            if not m in d:
+                                d[m] = co
+                            else:
+                                d[m] += co
 
-                                        d_hom[k]['J_coincidence'] = 'yes'
-                                    else:
-                                        d_hom[k]['J_coincidence'] = 'no'
+                        ## pick maximum JH representation for that allele
+                        ma = max(d, key=d.get)
+                    
+                        min_joined_reads = float(d_hom[k]['nreads'])*0.8/100
+                        if d[ma] >= min_joined_reads:
+                                                                       
+                            d_hom[k]['J_assigned'] = ma
+                            # assign IGHJ and determine the coincidence with the
+                            # joined subtype (overlapping reads between V and J)
+                            if d_hom[k]['J_assigned'] == d_hom[k]['Jregion'][0].split(' ')[1]:
+                                d_hom[k]['J_coincidence'] = 'yes'
+                            else:
+                                d_hom[k]['J_coincidence'] = 'no'
 
-                                    l.append(n[e].replace('\t', '|'))
+                            l = '{} {}'.format(str(d[ma]), ma)
 
-                                else:
+                        else:
 
-                                    d_hom[k]['J_assigned'] = d_hom[k]['Jregion'][0].split(' ')[1]
-                                    d_hom[k]['J_coincidence'] = 'not passing filters'
+                            d_hom[k]['J_assigned'] = d_hom[k]['Jregion'][0].split(' ')[1]
+                            d_hom[k]['J_coincidence'] = 'not passing filters'
+                        
                 else:
                     d_hom[k]['J_assigned'] = ''
                     d_hom[k]['J_coincidence'] = ''
-                
-                d_hom[k]['joined'] = l
+                d_hom[k]['joined'] = [l]
                 regV = k.split('_')[-1]
                 d_hom[k]['IGHV-J'] = regV + '_' + d_hom[k]['J_assigned']
                 if k in g_hom:
@@ -1363,7 +1400,7 @@ def joined_annotation(d_hom, g_hom, path_list):
                     g_hom[k]['joined'] = d_hom[k]['joined']
                     g_hom[k]['J_assigned'] = d_hom[k]['J_assigned']
                     g_hom[k]['J_coincidence'] = d_hom[k]['J_coincidence']
-
+    
     return d_hom, g_hom
 
 
@@ -1653,7 +1690,7 @@ def subsetFunction(fhand, ref, in_folder, out, gene=False):
                                                         ref.replace('-D','D-') +
                                                         '-gene-sorted.bam')))
         
-        subset = ("samtools view -H {0} > {2}; samtools view {0} "
+        subset = ("samtools view -H {0} > {2}; samtools view {0} -F4"
                   "| awk '{{ if ($3 ~ /{1}D*-*/) {{print}} }}' "
                   ">> {2}; samtools view {2} -b -o {3}; samtools index {3};"
                   " rm {2}").format(bam, ref, bam_out, bam_out_gene)
@@ -1661,7 +1698,7 @@ def subsetFunction(fhand, ref, in_folder, out, gene=False):
         bam_out = bam_out_gene
         
     else:
-        subset = ('samtools view -h {0} {1} -b -o {2}; samtools'
+        subset = ('samtools view -h {0} -F4 {1} -b -o {2}; samtools'
                   ' index {2}').format(bam, ref.replace('-D','D-'), bam_out)
 
     return bam_out, subset
@@ -2520,8 +2557,9 @@ def main():
     global minalt
     global basal
     global mincoverage
+    global TMPDIR
     out_folder = os.path.abspath(args.dest)
-
+    TMPDIR = out_folder
     # analysis mode
     if args.pipeline:
         fastqs_folder = os.path.abspath(args.inputf)
