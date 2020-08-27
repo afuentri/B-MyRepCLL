@@ -112,7 +112,7 @@ def dhom_write(s, v, k, d_hom):
     """Write hom output dict fields to tabular"""
     l = ('{},{},{},{},{},{},{},{},{},{},{},{}'
          ',{},{},{},{},{},{},{},{},{},{},{},'
-         '{},{},{}').format(s, v, d_hom[k]['nreads'], d_hom[k]['nreads_leader'],
+         '{},{},{},{},{},{},{},{},{}').format(s, v, d_hom[k]['nreads'], d_hom[k]['nreads_leader'],
                             d_hom[k]['nreads_fr1'], d_hom[k]['nreads_fr2'], d_hom[k]['nreads_fr3'],
                             d_hom[k]['length'], d_hom[k]['homology'],
                             d_hom[k]['mutational_status'], d_hom[k]['homology_noFR3'],
@@ -2263,7 +2263,7 @@ def bams_specific_read(list_bams, out, junctiond, vcf_folder, homology_folder, V
             else:
                 original_junction = ''
                 percent_junction = 0
-                
+               
             d[kname]['ori_junction'] = original_junction
             d[kname]['perc_ori_junction'] = percent_junction
             d[kname]['new_seq'] = seq
@@ -2617,7 +2617,7 @@ def main():
     ext = set(extensions)
 
     # Trimming
-    ## Perform quality trimming plus primers or only quality trimming
+    ## Perforzm quality trimming plus primers or only quality trimming
     trimmed_folder = os.path.join(out_folder, 'trimmed')
     create_dir(trimmed_folder)
 
