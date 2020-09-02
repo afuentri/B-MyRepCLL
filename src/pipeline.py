@@ -2108,8 +2108,16 @@ def specific_rearrangement_mapping(l, out, ref_dict, out_ref, g):
     else:
         log.warning('There are BAM files inside %s. Use mode overwrite if you '
                     'want to create BAM files in this folder', out)
-        list_bams = glob.glob(str(out) + '/*[!noFR3]-sorted.bam')
-        list_bams_noFR3 = glob.glob(str(out) + '/*-noFR3-sorted.bam')        
+        lbams = glob.glob(str(out) + '/*-sorted.bam')
+        list_bams, list_bams_noFR3 = [], []
+        for l in lbams:
+            if 'noFR3' in l:
+                list_bams_noFR3.append(l)
+            else:
+                list_bams.append(l)
+        
+        print('\n'.join(list_bams))
+        print('\n'.join(list_bams_noFR3))
 
     return list_bams, list_bams_noFR3
 
@@ -2141,12 +2149,32 @@ def nspscalculation(junction, vseq, jseq, dseq):
     return (n, p)
 
 
-def finding_new_junction(file_reads, vcf_complete_path, bam, refV_seq):
+def check_VH(seq, bam_name, join_info):
+
+    """"""
+    sample = os.path.basename(bam_name).split('_')[0]
+    Vallele = os.path.basename(bam_name).split('_')[1]
+    ftype = os.path.join(join_info, ('info_bams_{}.txt'.format(sample)))
+    CMD = 'grep -A7 "{}" {} | grep {} | wc -l'.format(seq, ftype, Vallele)
+    print(CMD)
+    proc = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE)
+    n = int(proc.communicate()[0].strip())
+    print('VH corresponding: ', seq, bam_name, n)
+    if n > 1:
+
+        return True
+    else:
+        return False
+    
+
+def finding_new_junction(file_reads, vcf_complete_path, bam, refV_seq, info_folder):
 
     """Store all unique reads in a file and start looking for CDR3"""
     CMD3 = ('samtools view {0} -F4 | cut -f10 | sort | uniq -c | sort -n > {1};'
             'cat {1} | tail -n 1').format(bam, file_reads)
-    
+    totalCMD = 'samtools view {0} -F4 | wc -l'.format(bam)
+    proc1 = subprocess.Popen(totalCMD, shell=True, stdout=subprocess.PIPE)
+    totalreads = float(proc1.communicate()[0].strip())
     proce = subprocess.Popen(CMD3, shell=True, stdout=subprocess.PIPE)
     ns = proce.communicate()[0].strip().split()
     ## if BAM file is empty we do not do this
@@ -2160,12 +2188,21 @@ def finding_new_junction(file_reads, vcf_complete_path, bam, refV_seq):
             while not l_junction:
                 ## will return an empty junction if CDR3 not found
                 l_next = next(n)
-                IGHD, pos_IGHD, list_insertions, list_deletions, disruption = parse_vcf_IGHD(vcf_complete_path,
-                                                                                             l_next[1], 290)
-                l_junction, start, end, prod = consensus2CDR3.cdr3_extraction(l_next[1], mincys=3)
-                major_readn, major_read = l_next
-                if IGHD == '':
-                    IGHD = calculateD(major_read, start, end)
+                ## include sequence and sample name to search VH info
+                if float(l_next[0]) >= (totalreads/100)*3:
+                    if check_VH(l_next[1], bam, info_folder):
+                        IGHD, pos_IGHD, list_insertions, list_deletions, disruption = parse_vcf_IGHD(vcf_complete_path,
+                                                                                                 l_next[1], 290)
+                        l_junction, start, end, prod = consensus2CDR3.cdr3_extraction(l_next[1], mincys=3)
+                        major_readn, major_read = l_next
+                        if IGHD == '':
+                            IGHD = calculateD(major_read, start, end)
+                    else:
+                        (l_junction, IGHD, start, end,
+                         major_read, major_readn, prod) = [None] * 7
+                else:
+                    (l_junction, IGHD, start, end,
+                     major_read, major_readn, prod) = [None] * 7
                 
         except StopIteration:
             pass
@@ -2208,7 +2245,8 @@ def calculateD(clean_seq, real_start, real_end):
     return seq
 
 
-def bams_specific_read(list_bams, out, junctiond, vcf_folder, homology_folder, Vdict, Jdict, d):
+def bams_specific_read(list_bams, out, junctiond, vcf_folder,
+                       homology_folder, Vdict, Jdict, d, info_folder):
 
     """"""
     overwrite = do_overwrite(out, '.txt')
@@ -2234,8 +2272,8 @@ def bams_specific_read(list_bams, out, junctiond, vcf_folder, homology_folder, V
             list_seqs.append(f_reads)
             new_junction, IGHD, start, end, seq, seqn, prod = finding_new_junction(f_reads,
                                                                              vcf_complete_path,
-                                                                             BAM, refV_seq)
-            print(new_junction, IGHD, start, end, seq, seqn, prod)
+                                                                                   BAM, refV_seq,
+                                                                                   info_folder)
             if new_junction:
                 major_read_np = nspscalculation(new_junction, refV_seq,
                                                 refJ_seq, IGHD)
@@ -2884,7 +2922,7 @@ def main():
         # get unique reads from bam_specific_rearrangements
         list_uniq_reads, d_hom = bams_specific_read(list_spec_bams, uniq_bam_sequences,
                                                     junctiond, folder_completevcfs, homology_folder,
-                                                    ref_dict, ref_dictJ, d_hom)
+                                                    ref_dict, ref_dictJ, d_hom, info_folder)
 
     # BLAST CDR3
     blast_list = prepare_CDR3_blast(fasta_IGHD_list, fblast_CDR3)
