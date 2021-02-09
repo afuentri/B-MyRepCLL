@@ -252,14 +252,14 @@ def bbduk_trimming(dic, out, merged_folder, fastqs_folder, pairs,
 
                 CMD_trimming = ('bbduk in1={} in2={} out1={} out2={} ref={} ktrim=l '
                                 'k=21 hdist=1 mink=18 restrictleft=30 qtrim=rl'
-                                ' trimq=20 minlength=80 stats={}'
+                                ' trimq=15 minlength=50 stats={}'
                                 ' refstats={}').format(merged_name, merged_mate, trimmed_name, 
                                                        trimmed_mate, adapters_file, stats_file, refstats_file)
             elif mode == 'right':
 
                 CMD_trimming = ('bbduk in1={} in2={} out1={} out2={} ref={} ktrim=r'
                                 ' k=21 hdist=1 mink=18 restrictright=30 qtrim=rl '
-                                'trimq=20 minlength=80 stats={}'
+                                'trimq=15 minlength=50 stats={}'
                                 ' refstats={}').format(merged_name, merged_mate, trimmed_name, 
                                                        trimmed_mate, adapters_file, stats_file, refstats_file)
 
@@ -267,14 +267,14 @@ def bbduk_trimming(dic, out, merged_folder, fastqs_folder, pairs,
             # single end mode
             if mode == 'left':
                 CMD_trimming = ('bbduk in1={} out1={} ref={} ktrim=l k=21 hdist=1'
-                                ' mink=18 restrictleft=30 qtrim=rl trimq=20 minlength=80'
+                                ' mink=18 restrictleft=30 qtrim=rl trimq=15 minlength=50'
                                 ' stats={} refstats={}').format(merged_name, trimmed_name, 
                                                                 adapters_file, stats_file, refstats_file)
 
             elif mode == 'right':
                 CMD_trimming = ('bbduk in1={} out1={} ref={} ktrim=r k=21 hdist=1'
-                                'mink=18 restrictright=30 qtrim=rl trimq=20 '
-                                'minlength=80 stats={} refstats={}').format(merged_name, 
+                                'mink=18 restrictright=30 qtrim=rl trimq=15 minlength=50'
+                                'stats={} refstats={}').format(merged_name, 
                                                                             trimmed_name, 
                                                                             adapters_file, 
                                                                             stats_file, refstats_file)
@@ -485,7 +485,18 @@ def list_vcfs(bams, folder):
 def parallel(CMD, p, LOG): ## make independent function with execute
 
     """"""
-    parallel = 'parallel --compress --joblog {} -j {} --tmpdir {} :::: {}'.format(LOG, p, TMPDIR, CMD)
+    parallel = ('parallel --compress --joblog {} '
+                '-j {} --tmpdir {} :::: {}').format(LOG, p, TMPDIR, CMD)
+    
+    execute(parallel)
+
+    
+def parallel_resume(CMD, p, LOG):
+
+    """"""
+    parallel = ('parallel --compress --resume-failed --joblog {} '
+                '-j {} --tmpdir {} :::: {}').format(LOG, p, TMPDIR, CMD)
+    
     execute(parallel)
 
 
@@ -1235,7 +1246,7 @@ def consensus_sequence_complete(ref, ref2, out, folder_references, bam, sample_n
 
     # Consensus sequence
     vcf_path = bcftools_consensus_complete(fcmd, bam, fasta_path_freebayes, ref_path, out_vcfs)
-
+    
     return fasta_path_freebayes, vcf_path
 
 
@@ -1282,10 +1293,10 @@ def homology_parsing(alignment_list, d, g, field, field2):
         if name.endswith('-fb.water'):
             k = '_'.join(name.replace('-fb.water', '').split('_')[:2])
             if clonal:
-                print('hom')
+                
                 k = '{}_{}'.format(k.split('_')[0].replace('123456789',
                                                            '-'), k.split('_')[1])
-                print(k)
+                
         
      
         if k in d:
@@ -1320,7 +1331,7 @@ def homology_parsing(alignment_list, d, g, field, field2):
             d[r][field] = ''
         if not field2 in d[r]:
             d[r][field2] = ''
-    print(g)
+    
     for r in g.keys():
         if not field in g[r]:
             g[r][field] = ''
@@ -1338,7 +1349,7 @@ def joined_annotation(d_hom, g_hom, path_list):
 
         for k in d_hom:
             if k.split('_')[0] == sample:
-                print(k)
+                
                 reg = k.split('_')[1]
 
                 CMD = 'grep "{}" {} | grep -v "None"'.format(reg, path)
@@ -1537,9 +1548,9 @@ def info_motifs(fhand, vcf, d_hom, g_hom):
     if clonal:
         sample_name = '_'.join(file_data.split('_')[0:2])
         Vallele = file_data.split('_')[2]
-        print('info')
+        
         k = sample_name.replace('123456789', '-') + '_' + Vallele
-        print(k)
+        
         Jallele = d_hom[k]['J_assigned']
         genes = False
         # complete
@@ -1564,7 +1575,6 @@ def info_motifs(fhand, vcf, d_hom, g_hom):
 def function_motifs(k, f, file_name2, out, Vallele, vcf_complete_path):
 
     """"""
-    print(vcf_complete_path)
     # definition of empty lists
     read, IGHD = ('', '')
     flist = read_file_simply(f)
@@ -1589,12 +1599,10 @@ def function_motifs(k, f, file_name2, out, Vallele, vcf_complete_path):
     # isolate sequence to extract CDR3
     sequence = ''.join(s)
     sequence = sequence.upper().strip()
-    print('hola')
-    print(sequence)
 
     # get CDR3 sequence
     aa, start, end, prod = consensus2CDR3.cdr3_extraction(sequence, mincys=3)
-    print(aa)
+    
     if aa:
         read = sequence[start:end]
         
@@ -1612,7 +1620,7 @@ def function_motifs(k, f, file_name2, out, Vallele, vcf_complete_path):
         
 
     finfo.close()
-    print(list_ins, list_dels)
+    
     return (read, IGHD, aa, fasta_path, fastaD_path,
             list_ins, list_dels, disr)
 
@@ -1623,20 +1631,18 @@ def motifs(seq_list, d_hom, g_hom, out, vcf_path):
     #seq_list is a fasta file
     fasta_CDR3_list = []
     fasta_IGHD_list = []
-    print(seq_list)
+    
     junction_seqs = {}
     ## iterate over given sequences to extract info
     for f in seq_list:
-        print(f)
-        print('infomotifs')
+        
         (file_name, file_name2, Vallele,
          vcf_complete_path, k, genes) = info_motifs(f, vcf_path,
                                                     d_hom, g_hom)
         # close info_motifs
         # check if key in d_hom
         if k in d_hom:
-            print(k)
-            print('motifs')
+            
             (read, IGHD, aa, fasta_path,
              fastaD_path, list_ins, list_dels, disr) = function_motifs(k, f,
                                                                        file_name2, out,
@@ -1648,15 +1654,12 @@ def motifs(seq_list, d_hom, g_hom, out, vcf_path):
             fasta_IGHD_list.append(fastaD_path)
             fasta_CDR3_list.append(fasta_path)
 
-            print('fb', file_name)
             if 'fb' in file_name:
-                print(list_ins, list_dels)
                 field, field2, field3, field4, field5 = (['CDR3', 'CDR3_length', 
                                                          'insertions', 'deletions', 'disruption'])
 
                 aa_l, aa_ins, aa_dels, aa_disr = [ i if i else '' for i in [aa, list_ins, list_dels, disr] ]
-                print('aay')
-                print(aa_ins, aa_dels)
+                
                 if genes:
                     g_hom[k][field] = aa_l
                     g_hom[k][field2] = len(aa_l)
@@ -1670,7 +1673,7 @@ def motifs(seq_list, d_hom, g_hom, out, vcf_path):
                     d_hom[k][field3] = ';'.join(aa_ins)
                     d_hom[k][field4] = ';'.join(aa_dels)
                     d_hom[k][field5] = aa_disr
-                    print(d_hom[k])
+                
 
 
     return fasta_IGHD_list, junction_seqs, d_hom, g_hom
@@ -1865,9 +1868,9 @@ def consensus_sequence_annotation(dictionary, g, fasta_path, tag):
     else:
         k = '{}_{}'.format(sample, Vgene)
         if clonal:
-            print('consensus')
+            
             k = '{}_{}'.format(sample.replace('123456789', '-'), Vgene)
-            print(k)
+            
     seq = read_file_simply(fasta_path)
     sequence = ''.join(seq[1:])
     dictionary[k][tag] = len(sequence)
@@ -1908,6 +1911,7 @@ def prepare_complete_consensus(tag, list_bams, out_folder, folder_vcfs,
         log.info('Executing %s; generating complete consensus sequences for each '
                  'sample and probable allele', path_CMD_consensus)
         parallel(path_CMD_consensus, proc, path_LOG_consensus)
+        parallel_resume(path_CMD_consensus, proc, path_LOG_consensus)
 
     else:
         log.warning('There are already consensus sequences files in %s. '
@@ -2115,9 +2119,6 @@ def specific_rearrangement_mapping(l, out, ref_dict, out_ref, g):
                 list_bams_noFR3.append(l)
             else:
                 list_bams.append(l)
-        
-        print('\n'.join(list_bams))
-        print('\n'.join(list_bams_noFR3))
 
     return list_bams, list_bams_noFR3
 
@@ -2156,15 +2157,18 @@ def check_VH(seq, bam_name, join_info):
     Vallele = os.path.basename(bam_name).split('_')[1]
     ftype = os.path.join(join_info, ('info_bams_{}.txt'.format(sample)))
     CMD = 'grep -A7 "{}" {} | grep {} | wc -l'.format(seq, ftype, Vallele)
-    print(CMD)
+    CMD2 = 'grep -A7 "{}" {} | grep "IGHV" | wc -l'.format(seq, ftype)
     proc = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE)
-    n = int(proc.communicate()[0].strip())
-    print('VH corresponding: ', seq, bam_name, n)
-    if n > 1:
+    n = float(proc.communicate()[0].strip())
+    proc2 = subprocess.Popen(CMD2, shell=True, stdout=subprocess.PIPE)
+    n2 = float(proc2.communicate()[0].strip())
+    
+    if n2 > 0:
+        if n/n2*100 > 1:
 
-        return True
-    else:
-        return False
+            return True
+        else:
+            return False
     
 
 def finding_new_junction(file_reads, vcf_complete_path, bam, refV_seq, info_folder):
@@ -2188,12 +2192,14 @@ def finding_new_junction(file_reads, vcf_complete_path, bam, refV_seq, info_fold
             while not l_junction:
                 ## will return an empty junction if CDR3 not found
                 l_next = next(n)
+                
                 ## include sequence and sample name to search VH info
                 if float(l_next[0]) >= (totalreads/100)*3:
                     if check_VH(l_next[1], bam, info_folder):
                         IGHD, pos_IGHD, list_insertions, list_deletions, disruption = parse_vcf_IGHD(vcf_complete_path,
                                                                                                  l_next[1], 290)
                         l_junction, start, end, prod = consensus2CDR3.cdr3_extraction(l_next[1], mincys=3)
+                
                         major_readn, major_read = l_next
                         if IGHD == '':
                             IGHD = calculateD(major_read, start, end)
@@ -2281,9 +2287,9 @@ def bams_specific_read(list_bams, out, junctiond, vcf_folder,
             ## LOOK FOR THE JUNCTION IN BAM ONLY IF IT EXISTS
             if isinstance(seq_junction, list):
                 list_junction = [t for t in seq_junction if t != '']
-                print(list_junction)
+                
                 for s in list_junction:
-                    print('ori', s)
+                    
                     original_junction = s
                     # if the original region is > 20% in BAMS
                     percent_junction = major_reads_junction(BAM, s, f_reads)
@@ -2295,7 +2301,7 @@ def bams_specific_read(list_bams, out, junctiond, vcf_folder,
                 # if the original region is > 20% in BAMS
                 percent_junction = major_reads_junction(BAM, seq_junction, f_reads)
                 # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
-                print('aqui', seq_junction)
+                
                 
 
             else:
@@ -2541,8 +2547,6 @@ def blast_annotation(blast_list, d_hom, g_hom):
         else:
             k = sample_name + '_' + IGHV
 
-        print('anno')
-        print(k)
         if 'fb' in os.path.basename(blast):
             field = 'IGHD'
 
@@ -2910,11 +2914,10 @@ def main():
     ## water output to add the homology result to the final table
     d_hom, g_hom = homology_parsing(water_list, d_hom, g_hom, 'homology', 'mutational_status')
     d_hom, g_hom = homology_parsing(water_list2, d_hom, g_hom, 'homology_noFR3', 'mutational_status_noFR3')
-    print(d_hom)
+
     prepare_consensus_sequence_annotation(d_hom, g_hom, consensus_complete_list)
 
     # Productivity and CDR3
-    print(consensus_complete_list)
     fasta_IGHD_list, junctiond, d_hom, g_hom = motifs(consensus_complete_list,
                                                       d_hom, g_hom, CDR3_fastas_folder,
                                                       folder_completevcfs)
@@ -2925,26 +2928,24 @@ def main():
                                                     ref_dict, ref_dictJ, d_hom, info_folder)
 
     # BLAST CDR3
-    blast_list = prepare_CDR3_blast(fasta_IGHD_list, fblast_CDR3)
-    emboss_list, EW_list = prepare_CDR3_emboss(fasta_IGHD_list, fblast_CDR3, refD)
+    #blast_list = prepare_CDR3_blast(fasta_IGHD_list, fblast_CDR3)
+    #emboss_list, EW_list = prepare_CDR3_emboss(fasta_IGHD_list, fblast_CDR3, refD)
 
     ## add CDR3 blast results to homology table
-    blast_annotation(blast_list, d_hom, g_hom)
-    emboss_annotation(EW_list, d_hom, g_hom)
+    #blast_annotation(blast_list, d_hom, g_hom)
+    #emboss_annotation(EW_list, d_hom, g_hom)
 
     ## output
     # Write dictionary to out file 'homology_table.csv'
     for k in sorted(d_hom):
         if clonal:
             s = '_'.join(k.split('_')[0:2])
-            print('blast')
             v = k.split('_')[2]
-            print(s, v)
+            
         else:
             s = k.split('_')[0]
             v = k.split('_')[1]
-        print(k)
-        print(d_hom[k])
+        
         l = dhom_write(s, v, k, d_hom)
         f_hom.write(l + '\n')
 

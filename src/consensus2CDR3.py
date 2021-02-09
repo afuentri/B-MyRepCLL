@@ -121,7 +121,7 @@ def CDR3_minning(motif, min_cys, all_cys, seq):
         if CDR3 != '' and m <= 50:
             break
         orf_cys = [e for e in all_cys if ((m - e) % 3 == 0) ]
-        ## choose min_cys less than 60 nuc from WGXG
+        ## choose min_cys less than 85 nuc from WGXG
         lvalid = [e for e in orf_cys if (m - e) < 85]
         if lvalid != []:
             cont_cys = min(lvalid)
@@ -143,7 +143,8 @@ def CDR3_minning(motif, min_cys, all_cys, seq):
                         seq_CDR3.append(codon)
                     else:
                         seq_CDR3.append('X')
-            if not '_' in seq_CDR3 and len(seq_CDR3) > 1:
+            #if not '_' in seq_CDR3 and len(seq_CDR3) > 1:
+            if len(seq_CDR3) > 1:
                 possible_cdr3.append(seq_CDR3)
                     
     
@@ -186,6 +187,7 @@ def get_CDR3(seq, mincys=80):
     list_cys = [ e for e in cys if e > mincys ]
     min_cys_big = [ e for e in list_cys if e > 10]
     min_motif = [ e for e in motif if e > 10 ]
+    
     if min_motif == []:
     
         CDR3, start, end = (None, None, None)
@@ -196,7 +198,9 @@ def get_CDR3(seq, mincys=80):
             ## 80 is not valid for sequences in the middle
             CDR3, start, end = CDR3_minning(min_motif,
                                             min(min_cys_big), min_cys_big, seq)
-            productive = True
+            if CDR3:
+                if not '_' in CDR3:
+                    productive = True
         else:
             CDR3, start, end = (None, None, None)
         
