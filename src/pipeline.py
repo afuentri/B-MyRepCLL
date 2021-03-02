@@ -99,23 +99,21 @@ def write_header(fhand):
 
     """"""
     fhand.write('sample_name,Vregion,reads_mapped,reads_mapped_leader,reads_mapped_fr1,'
-                'reads_mapped_fr2,reads_mapped_fr3,region_length,homology-IGHV'
-                                ',mutational_status,homology-IGHV_noFR3,mutational_status_noFR3,'
+                'reads_mapped_fr2,reads_mapped_fr3,region_length,homology-IGHV_noFR3,mutational_status_noFR3,'
                                 'joined,Jregion,J_assigned,J_coincidence,'
                                 'IGHV-J,consensus_length,CDR3,CDR3_length,IGHD,IGHD_emboss,'
-                                'insertions,deletions,ORF disruption,ori_junction,'
-                'perc_ori_junction,majorproductive_seq,nreads_majorproductive_seq,major_CDR3,major_IGHD,major_prod\n')
+                                'insertions,deletions,ORF disruption,'
+                'majorproductive_seq,nreads_majorproductive_seq,major_CDR3,major_IGHD,major_prod\n')
 
 
 def dhom_write(s, v, k, d_hom):
 
     """Write hom output dict fields to tabular"""
-    l = ('{},{},{},{},{},{},{},{},{},{},{},{}'
-         ',{},{},{},{},{},{},{},{},{},{},{},'
+    l = ('{},{},{},{},{},{},{},{},{},{},'
+         '{},{},{},{},{},{},{},{},{},'
          '{},{},{},{},{},{},{},{},{}').format(s, v, d_hom[k]['nreads'], d_hom[k]['nreads_leader'],
                             d_hom[k]['nreads_fr1'], d_hom[k]['nreads_fr2'], d_hom[k]['nreads_fr3'],
-                            d_hom[k]['length'], d_hom[k]['homology'],
-                            d_hom[k]['mutational_status'], d_hom[k]['homology_noFR3'],
+                            d_hom[k]['length'], d_hom[k]['homology_noFR3'],
                             d_hom[k]['mutational_status_noFR3'],';'.join(d_hom[k]['joined']),
                             ';'.join(d_hom[k]['Jregion']), d_hom[k]['J_assigned'],
                             d_hom[k]['J_coincidence'],
@@ -123,8 +121,7 @@ def dhom_write(s, v, k, d_hom):
                             d_hom[k]['CDR3'],
                             d_hom[k]['CDR3_length'], d_hom[k]['IGHD'],d_hom[k]['IGHD_emboss'],
                             d_hom[k]['insertions'],
-                            d_hom[k]['deletions'], d_hom[k]['disruption'], d_hom[k]['ori_junction'],
-                            d_hom[k]['perc_ori_junction'], d_hom[k]['new_seq'], d_hom[k]['nreads_new_seq'],
+                            d_hom[k]['deletions'], d_hom[k]['disruption'], d_hom[k]['new_seq'], d_hom[k]['nreads_new_seq'],
                             d_hom[k]['new_CDR3'], d_hom[k]['new_IGHD'], d_hom[k]['prod'])
 
     return l
@@ -1530,6 +1527,7 @@ def alternative_J_assign(d_hom, pairs, out, trimmed_folder, refJ):
 def CDR32fasta(list_reads, out, fasta_path):
 
     """"""
+    print(list_reads)
     fasta = open_file(fasta_path, mode = 'write')
     for i in range(len(list_reads)):
         if list_reads[i] != '':
@@ -1590,7 +1588,7 @@ def function_motifs(k, f, file_name2, out, Vallele, vcf_complete_path):
     # Get sequence and clean it
     # function
     s = []
-    for m in flist[1:]:
+    for m in fist[1:]:
         if not m.startswith('>'):
             s.append(m.strip())
         else:
@@ -1656,7 +1654,8 @@ def motifs(seq_list, d_hom, g_hom, out, vcf_path):
 
             if 'fb' in file_name:
                 field, field2, field3, field4, field5 = (['CDR3', 'CDR3_length', 
-                                                         'insertions', 'deletions', 'disruption'])
+                                                         'insertions', 'deletions',
+                                                          'disruption'])
 
                 aa_l, aa_ins, aa_dels, aa_disr = [ i if i else '' for i in [aa, list_ins, list_dels, disr] ]
                 
@@ -2012,7 +2011,7 @@ def specific_rearrangement_bwamem(fastq, out, fcmd, ref_dict, out_ref, g):
     bam_path = os.path.join(out, bam_name)
     ref_path = os.path.join(out_ref, (ref_name + '.fa'))
     make_reference(ref_path, ref_name, seq, mode='write')
-    CMD = ('bwa index {1}; bwa mem -t4 -M -L 50 -R '
+    CMD = ('bwa index {1}; bwa mem -t4-M -L 50 -R '
            '\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{4}\\tPU:{0}\" '
            '{1} -p {2} | samtools view -b - | samtools sort -o {3} -; samtools index {3}').format(sample_name, 
                                                                                                   ref_path, fastq, 
@@ -2022,6 +2021,14 @@ def specific_rearrangement_bwamem(fastq, out, fcmd, ref_dict, out_ref, g):
 
     return bam_path
 
+
+def uniq_fastq_script(fastq, fcmd):
+
+    """"""
+    script = os.path.join(path_IGH_scripts, 'dedup.py')
+    CMD = 'python3.5 {} {}'.format(script, fastq)
+    fcmd.write(CMD + '\n')
+    
 
 def uniq_fastq(fastq):
 
@@ -2089,10 +2096,13 @@ def specific_rearrangement_mapping(l, out, ref_dict, out_ref, g):
         log.debug('Starting mapping for specific rearrangements. Out folder %s', out)
         path_CMD_mapping, path_LOG_mapping = create_CMD('specific-mapping', out)
         path_CMD_removeFR3, path_LOG_removeFR3 = create_CMD('remove-FR3', out)
+        path_CMD_uniq, path_LOG_uniq = create_CMD('uniq-fastq', out)
+        fcmd0 = open_file(path_CMD_uniq, mode='write')
         fcmd = open_file(path_CMD_mapping, mode='write')
         fcmd2 = open_file(path_CMD_removeFR3, mode='write')
         for fastq in l:
-            uniq_fastq(fastq)
+            
+            uniq_fastq_script(fastq, fcmd0)
             bam_name = specific_rearrangement_bwamem(fastq, out, fcmd, ref_dict, out_ref, g)
             list_bams.append(bam_name)
 
@@ -2100,12 +2110,16 @@ def specific_rearrangement_mapping(l, out, ref_dict, out_ref, g):
             bam_noFR3_name = remove_FR3(bam_name, fcmd2)
             list_bams_noFR3.append(bam_noFR3_name)
 
+        fcmd0.close()
         fcmd.close()
         fcmd2.close()
+        parallel(path_CMD_uniq, proc, path_LOG_uniq)
+        
         if len(list_bams) >= 4:
             j = int(int(proc)/4)
         else:
             j = proc
+            
         parallel(path_CMD_mapping, j, path_LOG_mapping)
         parallel(path_CMD_removeFR3, proc, path_LOG_removeFR3)
         
@@ -2201,7 +2215,7 @@ def finding_new_junction(file_reads, vcf_complete_path, bam, refV_seq, info_fold
                         l_junction, start, end, prod = consensus2CDR3.cdr3_extraction(l_next[1], mincys=3)
                 
                         major_readn, major_read = l_next
-                        if IGHD == '':
+                        if IGHD == '' or not IGHD:
                             IGHD = calculateD(major_read, start, end)
                     else:
                         (l_junction, IGHD, start, end,
@@ -2251,7 +2265,7 @@ def calculateD(clean_seq, real_start, real_end):
     return seq
 
 
-def bams_specific_read(list_bams, out, junctiond, vcf_folder,
+def bams_specific_read(list_bams, out, vcf_folder,
                        homology_folder, Vdict, Jdict, d, info_folder):
 
     """"""
@@ -2260,9 +2274,15 @@ def bams_specific_read(list_bams, out, junctiond, vcf_folder,
         list_seqs = []
         log.debug('Starting looking for unique sequences for specific rearrangements.'
                   ' Out folder %s', out)
+        
+        fasta_IGHD_list = []
+        fasta_list = []
         def_list_bams = [b for b in list_bams if not 'gene' in b]
         for BAM in def_list_bams:
             
+            fastaname = os.path.basename(BAM).replace('.bam', '-IGHD.fasta')
+            fastaD_path = os.path.join(out, fastaname)
+            fasta_path = fastaD_path.replace('-IGHD', '')
             knam, refv, rest = os.path.basename(BAM).split('_')
             kname = '{}_{}'.format(knam, refv)
             vcf_incomplete_path = os.path.join(vcf_folder, kname)
@@ -2272,7 +2292,7 @@ def bams_specific_read(list_bams, out, junctiond, vcf_folder,
             
             refJ_seq = Jdict[refJ]
             
-            seq_junction = junctiond[kname]
+            #seq_junction = junctiond[kname]
             
             f_reads = os.path.join(out, (kname + '_uniqueread_counts.txt'))
             list_seqs.append(f_reads)
@@ -2280,46 +2300,59 @@ def bams_specific_read(list_bams, out, junctiond, vcf_folder,
                                                                              vcf_complete_path,
                                                                                    BAM, refV_seq,
                                                                                    info_folder)
+            if not seq:
+                read_CDR3 = ''
+            else:
+                read_CDR3 = seq[start:end]
+            
             if new_junction:
                 major_read_np = nspscalculation(new_junction, refV_seq,
                                                 refJ_seq, IGHD)
             ## define percent junction for non junction rearrangement
             ## LOOK FOR THE JUNCTION IN BAM ONLY IF IT EXISTS
-            if isinstance(seq_junction, list):
-                list_junction = [t for t in seq_junction if t != '']
+            #if isinstance(seq_junction, list):
+            #    list_junction = [t for t in seq_junction if t != '']
                 
-                for s in list_junction:
+            #    for s in list_junction:
                     
-                    original_junction = s
-                    # if the original region is > 20% in BAMS
-                    percent_junction = major_reads_junction(BAM, s, f_reads)
-                    # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
-                    # put in IGHD extraction part
+            #        original_junction = s
+            #        # if the original region is > 20% in BAMS
+            #        percent_junction = major_reads_junction(BAM, s, f_reads)
+            #        # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
+            #        # put in IGHD extraction part
                     
-            elif seq_junction != '':
-                original_junction = seq_junction
-                # if the original region is > 20% in BAMS
-                percent_junction = major_reads_junction(BAM, seq_junction, f_reads)
-                # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
+            #elif seq_junction != '':
+            #    original_junction = seq_junction
+            #    # if the original region is > 20% in BAMS
+            #    percent_junction = major_reads_junction(BAM, seq_junction, f_reads)
+            #    # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
                 
                 
 
-            else:
-                original_junction = ''
-                percent_junction = 0
+            #else:
+            #    original_junction = ''
+            #    percent_junction = 0
                
-            d[kname]['ori_junction'] = original_junction
-            d[kname]['perc_ori_junction'] = percent_junction
+            #d[kname]['ori_junction'] = original_junction
+            #d[kname]['perc_ori_junction'] = percent_junction
+            if not IGHD:
+                IGHD = ''
             d[kname]['new_seq'] = seq
             d[kname]['nreads_new_seq'] = seqn
             d[kname]['new_CDR3'] = new_junction
             d[kname]['new_IGHD'] = IGHD
+            CDR32fasta([IGHD], out, fastaD_path)
+            CDR32fasta([read_CDR3], out, fasta_path)
+            fasta_IGHD_list.append(fastaD_path)
+            fasta_list.append(fasta_path)
+            
             d[kname]['prod'] = prod
     else:
         list_seqs =  glob.glob(str(out) + '/*_uniqueread_counts.txt')
+        fasta_IGHD_list = glob.glob(str(out) + '/*-D.fa')
 
 
-    return list_seqs, d
+    return list_seqs, d, fasta_IGHD_list
 
     # write:     
     # - original_junction: junction sequence is there is one
@@ -2486,15 +2519,17 @@ def prepare_CDR3_blast(fasta_CDR3_list, out_folder):
 def emboss_annotation(emboss_list, d_hom, g_hom):
 
     """"""
+    field = ''
     for emboss in emboss_list:
         if clonal:
             sample_name = '_'.join(os.path.basename(emboss).split('_')[0:2])
             sample_name = sample_name.replace('123456789','-')
-            IGHV = os.path.basename(emboss).split('_')[2].replace('-fb-IGHD-EW','')
+            IGHV = os.path.basename(emboss).split('_')[2].replace('-IGHD-EW','')
         else:
             sample_name = os.path.basename(emboss).split('_')[0]
             IGHV = os.path.basename(emboss).split('_')[1]
-
+            print('we')
+            print('sample_name', 'IGHV')
         if 'gene' in IGHV:
             for a in g_hom:
                 if sample_name == a.split('_')[0]:
@@ -2502,8 +2537,8 @@ def emboss_annotation(emboss_list, d_hom, g_hom):
                         k = a
         else:
             k = sample_name + '_' + IGHV
-        if 'fb' in os.path.basename(emboss):
-            field = 'IGHD_emboss'
+
+        field = 'IGHD_emboss'
 
         fblast = read_file_simply(emboss)
         
@@ -2659,7 +2694,7 @@ def main():
     ext = set(extensions)
 
     # Trimming
-    ## Perforzm quality trimming plus primers or only quality trimming
+    ## Perform quality trimming plus primers or only quality trimming
     trimmed_folder = os.path.join(out_folder, 'trimmed')
     create_dir(trimmed_folder)
 
@@ -2907,33 +2942,33 @@ def main():
         vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_list_noFR3, 'variants')
     
     ## Consensus sequence and local alignment against the reference alleles using EMBOS water
-    water_list = mutationalStatus(consensus_complete_list, homology_folder, ref_dict)
+    #water_list = mutationalStatus(consensus_complete_list, homology_folder, ref_dict)
     water_list2 = mutationalStatus(consensus_complete_list_noFR3, homology_folder, ref_dict)
     ## Parsing homology data and adding the value to dictionary
     ## We will use water_list to open each alignment file and parse EMBOSS
     ## water output to add the homology result to the final table
-    d_hom, g_hom = homology_parsing(water_list, d_hom, g_hom, 'homology', 'mutational_status')
+    #d_hom, g_hom = homology_parsing(water_list, d_hom, g_hom, 'homology', 'mutational_status')
     d_hom, g_hom = homology_parsing(water_list2, d_hom, g_hom, 'homology_noFR3', 'mutational_status_noFR3')
 
-    prepare_consensus_sequence_annotation(d_hom, g_hom, consensus_complete_list)
+    prepare_consensus_sequence_annotation(d_hom, g_hom, consensus_complete_list_noFR3)
 
     # Productivity and CDR3
-    fasta_IGHD_list, junctiond, d_hom, g_hom = motifs(consensus_complete_list,
-                                                      d_hom, g_hom, CDR3_fastas_folder,
-                                                      folder_completevcfs)
+    #fasta_IGHD_list, junctiond, d_hom, g_hom = motifs(consensus_complete_list,
+    #                                                  d_hom, g_hom, CDR3_fastas_folder,
+    #                                                  folder_completevcfs)
     if not clonal:
         # get unique reads from bam_specific_rearrangements
-        list_uniq_reads, d_hom = bams_specific_read(list_spec_bams, uniq_bam_sequences,
-                                                    junctiond, folder_completevcfs, homology_folder,
+        list_uniq_reads, d_hom, DH_list = bams_specific_read(list_spec_bams, uniq_bam_sequences,
+                                                    folder_completevcfs, homology_folder,
                                                     ref_dict, ref_dictJ, d_hom, info_folder)
 
     # BLAST CDR3
     #blast_list = prepare_CDR3_blast(fasta_IGHD_list, fblast_CDR3)
-    #emboss_list, EW_list = prepare_CDR3_emboss(fasta_IGHD_list, fblast_CDR3, refD)
+    emboss_list, EW_list = prepare_CDR3_emboss(DH_list, fblast_CDR3, refD)
 
     ## add CDR3 blast results to homology table
     #blast_annotation(blast_list, d_hom, g_hom)
-    #emboss_annotation(EW_list, d_hom, g_hom)
+    emboss_annotation(EW_list, d_hom, g_hom)
 
     ## output
     # Write dictionary to out file 'homology_table.csv'
