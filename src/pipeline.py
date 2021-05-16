@@ -350,8 +350,8 @@ def bwamem_alignmentV(out, trimmed_folder, CMD, pairs, ref):
             ## filter FR3 reads
             CMD_alignment = ("bwa mem -t4 -M -R "
                              "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{5}\\tPU:{0}\" "
-                             "{1} {2} {3} | samtools view -b -o {7}; samtools view -H {7} > {6}; samtools view {7} | awk ' {{ if ($4 >= 200) print }} ' >> {6};"
-                             "samtools view {7} | awk  ' {{ if ($4 < 200 && $6 !~ \"S\") print }} ' >> {6}; samtools view -b {6} | samtools sort -o {4} -; rm {6}; rm {7}").format(sample_name, ref,
+                             "{1} {2} {3} | samtools view -b -o {7}; samtools view -H {7} > {6}; samtools view {7} | awk ' {{ if ($4 >= 200 || $4 <= 50) print }} ' >> {6};"
+                             "samtools view {7} | awk  ' {{ if ($4 < 200 && $4 > 50 && $6 !~ \"S\") print }} ' >> {6}; samtools view -b {6} | samtools sort -o {4} -; rm {6}; rm {7}").format(sample_name, ref,
                                                                                                  fastq1_path,
                                                                                                  fastq2_path,                                                                                                                                                                                                  bam_path, cdate,
                                                                                                  sam, tempbam_path)
@@ -366,8 +366,8 @@ def bwamem_alignmentV(out, trimmed_folder, CMD, pairs, ref):
             ## filter FR3 reads
             CMD_alignment = ("bwa mem -t4 -M -R "
                              "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{4}\\tPU:{0}\" "
-                             "{1} {2} | samtools view -b -o {6}; samtools view -H {6} > {5}; samtools view {6} | awk ' {{ if ($4 >= 200) print }} ' >> {5};"
-                             "samtools view {6} | awk  ' {{ if ($4 < 200 && $6 !~ \"S\") print }} ' >> {5}; samtools view -b {5} | samtools sort -o {3} -; rm {5}; rm {6}").format(sample_name,
+                             "{1} {2} | samtools view -b -o {6}; samtools view -H {6} > {5}; samtools view {6} | awk ' {{ if ($4 >= 200 || $4 <= 50) print }} ' >> {5};"
+                             "samtools view {6} | awk  ' {{ if ($4 < 200 && $4 > 50 && $6 !~ \"S\") print }} ' >> {5}; samtools view -b {5} | samtools sort -o {3} -; rm {5}; rm {6}").format(sample_name,
                                                                                              ref, fastq1_path, 
                                                                                              bam_path, cdate,
                                                                                              sam, tempbam_path)
@@ -2185,9 +2185,11 @@ def check_VH(seq, bam_name, join_info):
             return False
     
 
-def finding_new_junction(file_reads, vcf_complete_path, bam, refV_seq, info_folder):
+def finding_new_junction(sid, file_reads, vcf_complete_path, bam, refV_seq, info_folder,
+                         consensus_seq):
 
     """Store all unique reads in a file and start looking for CDR3"""
+    consensus_CDR3 = {}
     CMD3 = ('samtools view {0} -F4 | cut -f10 | sort | uniq -c | sort -n > {1};'
             'cat {1} | tail -n 1').format(bam, file_reads)
     totalCMD = 'samtools view {0} -F4 | wc -l'.format(bam)
@@ -2208,7 +2210,11 @@ def finding_new_junction(file_reads, vcf_complete_path, bam, refV_seq, info_fold
                 l_next = next(n)
                 
                 ## include sequence and sample name to search VH info
+                consensusseq = read_file_simply(consensus_seq)[1]
+
+                # if a read threshold is surpassed or CDR3 sequence is equal to that in the consensus sequence
                 if float(l_next[0]) >= (totalreads/100)*3:
+                                       
                     if check_VH(l_next[1], bam, info_folder):
                         IGHD, pos_IGHD, list_insertions, list_deletions, disruption = parse_vcf_IGHD(vcf_complete_path,
                                                                                                  l_next[1], 290)
@@ -2221,9 +2227,31 @@ def finding_new_junction(file_reads, vcf_complete_path, bam, refV_seq, info_fold
                         (l_junction, IGHD, start, end,
                          major_read, major_readn, prod) = [None] * 7
                 else:
+                    if sid in consensus_CDR3:
+                        c_junction, cstart, cend, cprod = consensus_CDR3[sid]
+                    else:
+                        c_junction, cstart, cend, cprod = consensus2CDR3.cdr3_extraction(consensusseq,
+                                                                                         mincys=3)
+                        consensus_CDR3[sid] = [c_junction, cstart, cend, cprod]
+                        
+                    r_junction, rstart, rend, rprod = consensus2CDR3.cdr3_extraction(l_next[1], mincys=3)
+                    if c_junction == r_junction:
+                        if check_VH(l_next[1], bam, info_folder):
+                            IGHD, pos_IGHD, list_insertions, list_deletions, disruption = parse_vcf_IGHD(vcf_complete_path,
+                                                                                                         l_next[1], 290)
+                            l_junction, start, end, prod = [r_junction, rstart, rend, rprod]
+                            major_readn, major_read = l_next
+                            if IGHD == '' or not IGHD:
+                                IGHD = calculateD(major_read, start, end)
+                        else:
+                            (l_junction, IGHD, start, end,
+                             major_read, major_readn, prod) = [None] * 7
+                    else:
+                        (l_junction, IGHD, start, end,
+                         major_read, major_readn, prod) = [None] * 7
                     (l_junction, IGHD, start, end,
                      major_read, major_readn, prod) = [None] * 7
-                
+                    
         except StopIteration:
             pass
         
@@ -2266,7 +2294,8 @@ def calculateD(clean_seq, real_start, real_end):
 
 
 def bams_specific_read(list_bams, out, vcf_folder,
-                       homology_folder, Vdict, Jdict, d, info_folder):
+                       homology_folder, Vdict, Jdict, d, info_folder,
+                       consensus_folder):
 
     """"""
     overwrite = do_overwrite(out, '.txt')
@@ -2295,14 +2324,18 @@ def bams_specific_read(list_bams, out, vcf_folder,
             #seq_junction = junctiond[kname]
             
             f_reads = os.path.join(out, (kname + '_uniqueread_counts.txt'))
+            consensus_seq = os.path.join(consensus_folder, (kname + '_' + refJ + '-fb.fa'))
             list_seqs.append(f_reads)
-            new_junction, IGHD, start, end, seq, seqn, prod = finding_new_junction(f_reads,
+            new_junction, IGHD, start, end, seq, seqn, prod = finding_new_junction(kname, f_reads,
                                                                              vcf_complete_path,
                                                                                    BAM, refV_seq,
-                                                                                   info_folder)
-            if not seq:
+                                                                                   info_folder,
+                                                                                   consensus_seq)
+            print(new_junction, IGHD, start, end, seq, seqn, prod)
+            if not seq or not new_junction:
                 read_CDR3 = ''
             else:
+                print(start, end)
                 read_CDR3 = seq[start:end]
             
             if new_junction:
@@ -2942,7 +2975,7 @@ def main():
         vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_list_noFR3, 'variants')
     
     ## Consensus sequence and local alignment against the reference alleles using EMBOS water
-    #water_list = mutationalStatus(consensus_complete_list, homology_folder, ref_dict)
+    #water_list  mutationalStatus(consensus_complete_list, homology_folder, ref_dict)
     water_list2 = mutationalStatus(consensus_complete_list_noFR3, homology_folder, ref_dict)
     ## Parsing homology data and adding the value to dictionary
     ## We will use water_list to open each alignment file and parse EMBOSS
@@ -2959,8 +2992,9 @@ def main():
     if not clonal:
         # get unique reads from bam_specific_rearrangements
         list_uniq_reads, d_hom, DH_list = bams_specific_read(list_spec_bams, uniq_bam_sequences,
-                                                    folder_completevcfs, homology_folder,
-                                                    ref_dict, ref_dictJ, d_hom, info_folder)
+                                                             folder_completevcfs, homology_folder,
+                                                             ref_dict, ref_dictJ, d_hom,
+                                                             info_folder, consensus_complete)
 
     # BLAST CDR3
     #blast_list = prepare_CDR3_blast(fasta_IGHD_list, fblast_CDR3)

@@ -117,17 +117,20 @@ def CDR3_minning(motif, min_cys, all_cys, seq):
     """"""
     possible_cdr3 = []
     CDR3, CDR3_end, CDR3_start = ('', '', '')
+    chosen_cdr3, chosen_start, chosen_end = (None, None, None)
     for m in motif:
         if CDR3 != '' and m <= 50:
             break
         orf_cys = [e for e in all_cys if ((m - e) % 3 == 0) ]
+    
         ## choose min_cys less than 85 nuc from WGXG
-        lvalid = [e for e in orf_cys if (m - e) < 85]
+        lvalid = [e for e in orf_cys if (m - e) < 85] ##change to omit the fixed value
+    
         if lvalid != []:
             cont_cys = min(lvalid)
         else:
-            cont_cys = []
-    
+            cont_cys = min(all_cys)
+            
         seq_CDR3 = []
         cys_codon = 1000
         aa = drawback3(seq, m + 3)
@@ -138,7 +141,7 @@ def CDR3_minning(motif, min_cys, all_cys, seq):
                 if cys_codon_pos:
                     ##
                     codon, cys_codon = cys_codon_pos
-                    print(codon)
+                    
                     if codon:
                         seq_CDR3.append(codon)
                     else:
@@ -147,27 +150,38 @@ def CDR3_minning(motif, min_cys, all_cys, seq):
             if len(seq_CDR3) > 1:
                 possible_cdr3.append(seq_CDR3)
                     
-    
+                
         if possible_cdr3 == []:
             CDR3, CDR3_end, CDR3_start = (None, None, None)
         else:
+            
             for s in possible_cdr3:
-    
+                
                 if 'X' in s:
                     ix = s.index('X')
                     CDR3_all = s[ix:]
                 else:
                     CDR3_all = s
     
-            inver = CDR3_all[::-1]
+                inver = CDR3_all[::-1]
             
-            if 'C' in inver:
-                CDR3 = ''.join(inver[inver.index('C'):])
-                CDR3_end = m + 3
-                CDR3_start = cys_codon -3
-                    
-    print(CDR3)
-    return CDR3, CDR3_start, CDR3_end
+                if 'C' in inver:
+                    CDR3 = ''.join(inver[inver.index('C'):])
+                    CDR3_end = m + 3
+                    CDR3_start = cys_codon -3
+                if not chosen_cdr3:
+                    chosen_cdr3 = CDR3
+                    chosen_end = CDR3_end
+                    chosen_start = CDR3_start
+                else:
+                
+                    if chosen_cdr3 in CDR3:
+                        chosen_cdr3 = CDR3
+                        chosen_end = CDR3_end
+                        chosen_start = CDR3_start
+                        
+    
+    return chosen_cdr3, chosen_start, chosen_end
     #print seq_CDR3
     #CDR3 = ''.join(seq_CDR3[::-1])
     #CDR3_end = m
@@ -240,7 +254,7 @@ def cdr3_extraction(fasta, mincys):
     SCRIPT FOR DETERMINING CDR3 IN A GIVEN SEQUENCE
     """
     mincys = 3
-    
+
     ## main
     #productivity = ''
 
@@ -262,6 +276,6 @@ def cdr3_extraction(fasta, mincys):
     
     if not prod_nature:
         productivity = 'not productive'
-    
+        
     return CDR3_nature, start_nature, end_nature, prod_nature   
-
+   
