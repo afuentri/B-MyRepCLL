@@ -376,6 +376,7 @@ def bwamem_alignmentV(out, trimmed_folder, CMD, pairs, ref):
 
     fcmd.close()
 
+    
 def bwamem_alignmentJ(out, trimmed_folder, CMD, pairs, ref):
 
     """"""
@@ -514,6 +515,7 @@ def vcf_parsing(folder_results, vcf_folder, vcf_list, name):
     # list coming from my file
     # remove not VCF files in VCF folder
     filename = name + '.csv'
+    
     vcf_fof = list2file(vcf_list, 'vcf.fof', vcf_folder)
     out_file = os.path.join(folder_results, filename)
     script = os.path.join(path_IGH_scripts, 'samt-freeb_parser-onlyvariants.py')
@@ -538,7 +540,7 @@ def bcftools_consensus(fcmd, fasta_path, vcf, refV, current_ref, bam_path, sampl
     fcmd.write(CMD_consensus + '\n')
 
 
-def bcftools_consensus_complete(fcmd, bam, fasta_path_freebayes, path_current_ref, out):
+def bcftools_consensus_complete(fcmd, bam, fasta_path_freebayes, path_current_ref, out, length_VH):
 
     """"""
     vcf_temp_fb = os.path.basename(bam).replace('-sorted.bam', '-fb.vcf.gz')
@@ -551,9 +553,21 @@ def bcftools_consensus_complete(fcmd, bam, fasta_path_freebayes, path_current_re
                                                                      bam, vcf_temp_fb_path, 
                                                                      fasta_path_freebayes, 
                                                                      frec, minalt, mincoverage)
-    fcmd.write(CMD_consensus_freebayes + '\n')
+    vcf_temp_VH_path = vcf_temp_fb_path.replace('-fb.vcf.gz','-VH-fb.vcf.gz')
+    CMD_consensus_freebayesVH = ('freebayes -f {0} -r {7}:0-{8} -m 0 --ploidy 1 --min-coverage {6}'
+                                 ' --genotype-qualities --strict-vcf -F {4} -C {5} {1} '
+                                 '| bgzip -c > {2}; tabix -f -p vcf {2} ; bcftools '
+                                 'consensus -f {0} {2} -o {3}').format(path_current_ref,
+                                                                       bam, vcf_temp_VH_path,
+                                                                       fasta_path_freebayes.replace('-fb.fa','-VH-fb.fa'),
+                                                                       frec, minalt, mincoverage,
+                                                                       os.path.basename(path_current_ref).replace('.fa', ''),
+                                                                       length_VH)
 
-    return vcf_temp_fb_path
+    fcmd.write(CMD_consensus_freebayes + '\n')
+    fcmd.write(CMD_consensus_freebayesVH + '\n')
+    
+    return vcf_temp_fb_path, vcf_temp_VH_path
 
 
 def prepare_trimming(out_folder, fastq_dictionary, merged_folder, 
@@ -814,12 +828,18 @@ def prepare_joined_references(out_folder, ref1, ref2):
 def probable_regions(stats, out, name):
 
     """"""
-    fname = os.path.join(out, name)
-    script = os.path.join(path_IGH_scripts, 'probable_regions.py')
-    CMD = 'python {} -f {} -v -o {}'.format(script, stats, fname)
-    log.info('Computing probable regions for %s', stats)
-    execute(CMD)
-
+    overwrite = do_overwrite(out, name)
+    if overwrite:
+        log.debug('Starting probable VH alleles calculation. Out folder is %s', out)
+        fname = os.path.join(out, name)
+        script = os.path.join(path_IGH_scripts, 'probable_regions.py')
+        CMD = 'python {} -f {} -v -o {}'.format(script, stats, fname)
+        log.info('Computing probable regions for %s', stats)
+        execute(CMD)
+    else:
+        fname = os.path.join(out, name)
+        log.warning('The file %s already exists. ', fname)
+        
     return fname
 
 
@@ -1002,6 +1022,7 @@ def filter_Vregion_basal(regions_listV, bam_listV):
             c[sample_name]['total_counts'] = 0
         for reg in regions_listV:
             if reg.split(',')[0] == sample_name:
+                
                 s, ref, counts, length, leader, fr1, fr2, fr3 = reg.split(',')
                 ref = ref.replace('D-','-D') #include D name in the allele field
                 Vgene = '-'.join(ref.split('_')[0].split('-')[:-1])
@@ -1230,7 +1251,7 @@ def consensus_sequenceV(ref, ref_dict, out, bam_path, vcf_folder, refV, sample, 
     return fasta_path_freebayes
 
 
-def consensus_sequence_complete(ref, ref2, out, folder_references, bam, sample_name, fcmd, out_vcfs):
+def consensus_sequence_complete(ref, ref2, out, folder_references, bam, sample_name, fcmd, out_vcfs, len_vh):
 
     """"""
     # Reference extraction
@@ -1242,9 +1263,13 @@ def consensus_sequence_complete(ref, ref2, out, folder_references, bam, sample_n
     fasta_path_freebayes = os.path.join(out, fasta_consensus_name_freebayes)
 
     # Consensus sequence
-    vcf_path = bcftools_consensus_complete(fcmd, bam, fasta_path_freebayes, ref_path, out_vcfs)
-    
-    return fasta_path_freebayes, vcf_path
+    vcf_path, VHvcf_path = bcftools_consensus_complete(fcmd, bam,
+                                                       fasta_path_freebayes,
+                                                       ref_path, out_vcfs,
+                                                       len_vh)
+
+    return (fasta_path_freebayes, fasta_path_freebayes.replace('-fb.fa','-VH-fb.fa'),
+            vcf_path, VHvcf_path)
 
 
 def homology(ref_dict, consensus_path, fcmd_homology, sample_name, homology_folder):
@@ -1293,24 +1318,21 @@ def homology_parsing(alignment_list, d, g, field, field2):
                 
                 k = '{}_{}'.format(k.split('_')[0].replace('123456789',
                                                            '-'), k.split('_')[1])
-                
+            if k in d:
         
-     
-        if k in d:
-        
-            for e in range(len(l)):
-                if l[e].startswith('# Length'):
-                    h = l[e].replace("#","") + ';' + l[e + 1].replace("#","")
-                    hom = h.split('(')[1].replace(")","").replace("%","")
-                    if float(hom) > 85:
-                        a = '(valid)'
-                        if float(hom) >= 98:
-                            mut_status = 'UM'
+                for e in range(len(l)):
+                    if l[e].startswith('# Length'):
+                        h = l[e].replace("#","") + ';' + l[e + 1].replace("#","")
+                        hom = h.split('(')[1].replace(")","").replace("%","")
+                        if float(hom) > 85:
+                            a = '(valid)'
+                            if float(hom) >= 98:
+                                mut_status = 'UM'
+                            else:
+                                mut_status = 'MM'
                         else:
-                            mut_status = 'MM'
-                    else:
-                        a = '(not valid)'
-                        mut_status = ''
+                            a = '(not valid)'
+                            mut_status = ''
 
 
             h = h + a
@@ -1880,13 +1902,15 @@ def consensus_sequence_annotation(dictionary, g, fasta_path, tag):
  
 
 def prepare_complete_consensus(tag, list_bams, out_folder, folder_vcfs, 
-                               folder_rearrangement_references):
+                               folder_rearrangement_references, ref_dict):
     
     """"""
     # iterate in d_hom
     overwrite = do_overwrite(out_folder, tag + '.fa')
     consensus_sequences = []
     vcfs = []
+    consensus_sequencesVH = []
+    vcfsVH = []
     if overwrite:
         log.debug('Starting complete rearrangement consensus sequence. '
                   'Out folder is %s', out_folder)
@@ -1894,17 +1918,23 @@ def prepare_complete_consensus(tag, list_bams, out_folder, folder_vcfs,
         fcmd = open_file(path_CMD_consensus, mode='write')
 
         for bam in list_bams:
-            out_name = os.path.basename(bam).replace('-sorted.bam','')
-            sample_name = out_name.split('_')[0]
-            current_ref = '_'.join(out_name.split('_')[1:]).replace('-noFR3', '')
-            complete_ref = '_'.join(out_name.split('_')[1:])
-            consensus_path_fb, vcf_path = consensus_sequence_complete(current_ref, complete_ref, out_folder, 
-                                                                      folder_rearrangement_references, bam, 
-                                                                      sample_name, fcmd, folder_vcfs)
+            ## avoid doing the consensus for vgene BAM files
+            if not 'gene' in bam:
+                out_name = os.path.basename(bam).replace('-sorted.bam','')
+                sample_name = out_name.split('_')[0]
+                current_ref = '_'.join(out_name.split('_')[1:]).replace('-noFR3', '')
+                complete_ref = '_'.join(out_name.split('_')[1:])
+                len_vh = len(ref_dict[os.path.basename(current_ref).split('_')[0]])
+                (consensus_path_fb, consensus_path_VHfb,
+                 vcf_path, vcf_pathVH) = consensus_sequence_complete(current_ref, complete_ref, out_folder, 
+                                                                     folder_rearrangement_references, bam, 
+                                                                     sample_name, fcmd, folder_vcfs, len_vh)
 
-            # add consensus sequences paths to a list
-            consensus_sequences.append(consensus_path_fb)
-            vcfs.append(vcf_path)
+                # add consensus sequences paths to a list
+                consensus_sequences.append(consensus_path_fb)
+                vcfs.append(vcf_path)
+                consensus_sequencesVH.append(consensus_path_VHfb)
+                vcfsVH.append(vcf_pathVH)
 
         fcmd.close()
         log.info('Executing %s; generating complete consensus sequences for each '
@@ -1915,11 +1945,14 @@ def prepare_complete_consensus(tag, list_bams, out_folder, folder_vcfs,
     else:
         log.warning('There are already consensus sequences files in %s. '
                     'Use mode overwrite if you want to overwrite the existing file.', out_folder)
-        consensus_sequences = glob.glob(str(out_folder) + ('/*' + tag + '*.fa'))
-        vcfs = glob.glob(str(folder_vcfs) + (tag + '/*' + tag + '*.vcf.gz'))
-
-
-    return consensus_sequences, vcfs
+        consensus_sequences1 = glob.glob(str(out_folder) + ('/*' + tag + '*.fa'))
+        consensus_sequencesVH = glob.glob(str(out_folder) + ('/*' + tag + '*-VH-fb.fa'))
+        consensus_sequences = [f for f in consensus_sequences1 if not f in consensus_sequencesVH]
+        vcfs1 = glob.glob(str(folder_vcfs) + (tag + '/*' + tag + '*.vcf.gz'))
+        vcfsVH = glob.glob(str(folder_vcfs) + (tag + '/*' + tag + '*VH-fb.vcf.gz'))
+        vcfs = [e for e in vcfs1 if not e in vcfsVH]
+        
+    return consensus_sequences, consensus_sequencesVH, vcfs, vcfsVH
 
 
 def prepare_consensus_sequence_annotation(dictionary, g, list_consensus):
@@ -2099,7 +2132,7 @@ def specific_rearrangement_mapping(l, out, ref_dict, out_ref, g):
         path_CMD_uniq, path_LOG_uniq = create_CMD('uniq-fastq', out)
         fcmd0 = open_file(path_CMD_uniq, mode='write')
         fcmd = open_file(path_CMD_mapping, mode='write')
-        fcmd2 = open_file(path_CMD_removeFR3, mode='write')
+        #fcmd2 = open_file(path_CMD_removeFR3, mode='write')
         for fastq in l:
             
             uniq_fastq_script(fastq, fcmd0)
@@ -2107,12 +2140,12 @@ def specific_rearrangement_mapping(l, out, ref_dict, out_ref, g):
             list_bams.append(bam_name)
 
             ## create BAM without FR3
-            bam_noFR3_name = remove_FR3(bam_name, fcmd2)
-            list_bams_noFR3.append(bam_noFR3_name)
+            #bam_noFR3_name = remove_FR3(bam_name, fcmd2)
+            #list_bams_noFR3.append(bam_noFR3_name)
 
         fcmd0.close()
         fcmd.close()
-        fcmd2.close()
+        #fcmd2.close()
         parallel(path_CMD_uniq, proc, path_LOG_uniq)
         
         if len(list_bams) >= 4:
@@ -2121,20 +2154,21 @@ def specific_rearrangement_mapping(l, out, ref_dict, out_ref, g):
             j = proc
             
         parallel(path_CMD_mapping, j, path_LOG_mapping)
-        parallel(path_CMD_removeFR3, proc, path_LOG_removeFR3)
+        #parallel(path_CMD_removeFR3, proc, path_LOG_removeFR3)
         
     else:
         log.warning('There are BAM files inside %s. Use mode overwrite if you '
                     'want to create BAM files in this folder', out)
         lbams = glob.glob(str(out) + '/*-sorted.bam')
-        list_bams, list_bams_noFR3 = [], []
-        for l in lbams:
-            if 'noFR3' in l:
-                list_bams_noFR3.append(l)
-            else:
-                list_bams.append(l)
+        #list_bams, list_bams_noFR3 = [], []
+        list_bams = lbams
+        #for l in lbams:
+        #    if 'noFR3' in l:
+        #        list_bams_noFR3.append(l)
+        #    else:
+        #        list_bams.append(l)
 
-    return list_bams, list_bams_noFR3
+    return list_bams#, list_bams_noFR3
 
 
 def sequences_overlap(s1, s2):
@@ -2185,7 +2219,7 @@ def check_VH(seq, bam_name, join_info):
             return False
     
 
-def finding_new_junction(sid, file_reads, vcf_complete_path, bam, refV_seq, info_folder,
+def finding_new_junction(d, sid, file_reads, vcf_complete_path, bam, refV_seq, info_folder,
                          consensus_seq):
 
     """Store all unique reads in a file and start looking for CDR3"""
@@ -2197,8 +2231,14 @@ def finding_new_junction(sid, file_reads, vcf_complete_path, bam, refV_seq, info
     totalreads = float(proc1.communicate()[0].strip())
     proce = subprocess.Popen(CMD3, shell=True, stdout=subprocess.PIPE)
     ns = proce.communicate()[0].strip().split()
-    ## if BAM file is empty we do not do this
+    ## if BAM file is empty or VH allele is represented with less than 100 reads we do not do this
+    ## multiple reads can be due to major JH allele paired with different VHs
+    print(bam)
+    print(d[sid])
+    print(sid)
+    print(int(d[sid]['nreads']))
     if len(ns) > 1:
+        print('yes')
         major_readn, major_read = ns
         # we define major_read as the sequence with more reads first
         list_majors = read_file_simply(file_reads)
@@ -2260,7 +2300,6 @@ def finding_new_junction(sid, file_reads, vcf_complete_path, bam, refV_seq, info
     else:
         l_junction, IGHD, start, end, major_read, major_readn, prod = [None] * 7
 
-    
     return l_junction, IGHD, start, end, major_read, major_readn, prod
     
 
@@ -2314,72 +2353,82 @@ def bams_specific_read(list_bams, out, vcf_folder,
             fasta_path = fastaD_path.replace('-IGHD', '')
             knam, refv, rest = os.path.basename(BAM).split('_')
             kname = '{}_{}'.format(knam, refv)
-            vcf_incomplete_path = os.path.join(vcf_folder, kname)
-            vcf_complete_path = glob.glob(vcf_incomplete_path + '*.vcf.gz')[0]
-            refV_seq = Vdict[refv]
-            refJ = rest.replace('-sorted.bam','')
-            
-            refJ_seq = Jdict[refJ]
-            
-            #seq_junction = junctiond[kname]
-            
-            f_reads = os.path.join(out, (kname + '_uniqueread_counts.txt'))
-            consensus_seq = os.path.join(consensus_folder, (kname + '_' + refJ + '-fb.fa'))
-            list_seqs.append(f_reads)
-            new_junction, IGHD, start, end, seq, seqn, prod = finding_new_junction(kname, f_reads,
-                                                                             vcf_complete_path,
-                                                                                   BAM, refV_seq,
-                                                                                   info_folder,
-                                                                                   consensus_seq)
-            print(new_junction, IGHD, start, end, seq, seqn, prod)
-            if not seq or not new_junction:
-                read_CDR3 = ''
-            else:
-                print(start, end)
-                read_CDR3 = seq[start:end]
-            
-            if new_junction:
-                major_read_np = nspscalculation(new_junction, refV_seq,
-                                                refJ_seq, IGHD)
-            ## define percent junction for non junction rearrangement
-            ## LOOK FOR THE JUNCTION IN BAM ONLY IF IT EXISTS
-            #if isinstance(seq_junction, list):
-            #    list_junction = [t for t in seq_junction if t != '']
-                
-            #    for s in list_junction:
-                    
-            #        original_junction = s
-            #        # if the original region is > 20% in BAMS
-            #        percent_junction = major_reads_junction(BAM, s, f_reads)
-            #        # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
-            #        # put in IGHD extraction part
-                    
-            #elif seq_junction != '':
-            #    original_junction = seq_junction
-            #    # if the original region is > 20% in BAMS
-            #    percent_junction = major_reads_junction(BAM, seq_junction, f_reads)
-            #    # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
-                
-                
 
-            #else:
-            #    original_junction = ''
-            #    percent_junction = 0
-               
-            #d[kname]['ori_junction'] = original_junction
-            #d[kname]['perc_ori_junction'] = percent_junction
-            if not IGHD:
-                IGHD = ''
-            d[kname]['new_seq'] = seq
-            d[kname]['nreads_new_seq'] = seqn
-            d[kname]['new_CDR3'] = new_junction
-            d[kname]['new_IGHD'] = IGHD
-            CDR32fasta([IGHD], out, fastaD_path)
-            CDR32fasta([read_CDR3], out, fasta_path)
-            fasta_IGHD_list.append(fastaD_path)
-            fasta_list.append(fasta_path)
-            
-            d[kname]['prod'] = prod
+            if int(d[kname]['nreads']) >= 100:
+                vcf_incomplete_path = os.path.join(vcf_folder, kname)
+                vcf_complete_path = glob.glob(vcf_incomplete_path + '*.vcf.gz')[0]
+                refV_seq = Vdict[refv]
+                refJ = rest.replace('-sorted.bam','')
+                
+                refJ_seq = Jdict[refJ]
+                
+                #seq_junction = junctiond[kname]
+                
+                f_reads = os.path.join(out, (kname + '_uniqueread_counts.txt'))
+                consensus_seq = os.path.join(consensus_folder, (kname + '_' + refJ + '-fb.fa'))
+                list_seqs.append(f_reads)
+                new_junction, IGHD, start, end, seq, seqn, prod = finding_new_junction(d, kname, f_reads,
+                                                                                 vcf_complete_path,
+                                                                                       BAM, refV_seq,
+                                                                                       info_folder,
+                                                                                       consensus_seq)
+                print(new_junction, IGHD, start, end, seq, seqn, prod)
+                
+                if not seq or not new_junction:
+                    read_CDR3 = ''
+                else:
+                    print(start, end)
+                    read_CDR3 = seq[start:end]
+                
+                if new_junction:
+                    major_read_np = nspscalculation(new_junction, refV_seq,
+                                                    refJ_seq, IGHD)
+                ## define percent junction for non junction rearrangement
+                ## LOOK FOR THE JUNCTION IN BAM ONLY IF IT EXISTS
+                #if isinstance(seq_junction, list):
+                #    list_junction = [t for t in seq_junction if t != '']
+                    
+                #    for s in list_junction:
+                        
+                #        original_junction = s
+                #        # if the original region is > 20% in BAMS
+                #        percent_junction = major_reads_junction(BAM, s, f_reads)
+                #        # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
+                #        # put in IGHD extraction part
+                        
+                #elif seq_junction != '':
+                #    original_junction = seq_junction
+                #    # if the original region is > 20% in BAMS
+                #    percent_junction = major_reads_junction(BAM, seq_junction, f_reads)
+                #    # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
+                    
+                    
+                
+                #else:
+                #    original_junction = ''
+                #    percent_junction = 0
+                   
+                #d[kname]['ori_junction'] = original_junction
+                #d[kname]['perc_ori_junction'] = percent_junction
+                if not IGHD:
+                    IGHD = ''
+                d[kname]['new_seq'] = seq
+                d[kname]['nreads_new_seq'] = seqn
+                d[kname]['new_CDR3'] = new_junction
+                d[kname]['new_IGHD'] = IGHD
+                CDR32fasta([IGHD], out, fastaD_path)
+                CDR32fasta([read_CDR3], out, fasta_path)
+                fasta_IGHD_list.append(fastaD_path)
+                fasta_list.append(fasta_path)
+                
+                d[kname]['prod'] = prod
+
+            else:
+                d[kname]['new_seq'] = 'not calculated'
+                d[kname]['nreads_new_seq'] = 'not calculated'
+                d[kname]['new_CDR3'] = 'not calculated'
+                d[kname]['new_IGHD'] = 'not calculated'
+                    
     else:
         list_seqs =  glob.glob(str(out) + '/*_uniqueread_counts.txt')
         fasta_IGHD_list = glob.glob(str(out) + '/*-D.fa')
@@ -2957,34 +3006,37 @@ def main():
         ## Dict from VJ fasta reference file
         refVJ_dict = VJref_dictionary(refVJ)
         list_merged2fastq = merged2fastq(list_merged, merged2fastqs_folder)
-        list_spec_bams, list_spec_noFR3_bams = specific_rearrangement_mapping(list_merged2fastq, specific_mapping,
-                                                        refVJ_dict, rearrangement_refs, g_hom)
+        list_spec_bams = specific_rearrangement_mapping(list_merged2fastq, specific_mapping,
+                                                                              refVJ_dict, rearrangement_refs, g_hom)
         
         # include step for vcf parsing for indels
-        consensus_complete_list, vcfs_complete_list = prepare_complete_consensus('', list_spec_bams,
-                                                                                 consensus_complete,
-                                                                                 folder_completevcfs,
-                                                                                 rearrangement_refs)
+        (consensus_complete_list, consensus_complete_listVH,
+         vcfs_complete_list, vcfs_complete_listVH) = prepare_complete_consensus('', list_spec_bams,
+                                                                                consensus_complete,
+                                                                                folder_completevcfs,
+                                                                                rearrangement_refs,
+                                                                                ref_dict)
 
         vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_list, 'variants')
         
-        consensus_complete_list_noFR3, vcfs_complete_list_noFR3 = prepare_complete_consensus('-noFR3', list_spec_noFR3_bams,
-                                                                                  consensus_complete,
-                                                                                  folder_completevcfs,
-                                                                                  rearrangement_refs)
-        vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_list_noFR3, 'variants')
+        #consensus_complete_list_noFR3, vcfs_complete_list_noFR3 = prepare_complete_consensus('-noFR3', list_spec_noFR3_bams,
+        #                                                                          consensus_complete,
+        #                                                                          folder_completevcfs,
+        #                                                                          rearrangement_refs)
+        # only perform vcf parsing with complete sequences
+        #vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_listVH, 'variants')
     
     ## Consensus sequence and local alignment against the reference alleles using EMBOS water
     #water_list  mutationalStatus(consensus_complete_list, homology_folder, ref_dict)
-    water_list2 = mutationalStatus(consensus_complete_list_noFR3, homology_folder, ref_dict)
+    water_list2 = mutationalStatus(consensus_complete_listVH, homology_folder, ref_dict)
     ## Parsing homology data and adding the value to dictionary
     ## We will use water_list to open each alignment file and parse EMBOSS
     ## water output to add the homology result to the final table
     #d_hom, g_hom = homology_parsing(water_list, d_hom, g_hom, 'homology', 'mutational_status')
     d_hom, g_hom = homology_parsing(water_list2, d_hom, g_hom, 'homology_noFR3', 'mutational_status_noFR3')
 
-    prepare_consensus_sequence_annotation(d_hom, g_hom, consensus_complete_list_noFR3)
-
+    prepare_consensus_sequence_annotation(d_hom, g_hom, consensus_complete_listVH)
+    
     # Productivity and CDR3
     #fasta_IGHD_list, junctiond, d_hom, g_hom = motifs(consensus_complete_list,
     #                                                  d_hom, g_hom, CDR3_fastas_folder,
