@@ -2250,9 +2250,10 @@ def finding_new_junction(d, sid, file_reads, vcf_complete_path, bam, refV_seq, i
                 l_next = next(n)
                 
                 ## include sequence and sample name to search VH info
-                consensusseq = read_file_simply(consensus_seq)[1]
+                consensusseq = ''.join(read_file_simply(consensus_seq)[1:])
 
                 # if a read threshold is surpassed or CDR3 sequence is equal to that in the consensus sequence
+                print(l_next[0])
                 if float(l_next[0]) >= (totalreads/100)*3:
                                        
                     if check_VH(l_next[1], bam, info_folder):
@@ -2273,24 +2274,36 @@ def finding_new_junction(d, sid, file_reads, vcf_complete_path, bam, refV_seq, i
                         c_junction, cstart, cend, cprod = consensus2CDR3.cdr3_extraction(consensusseq,
                                                                                          mincys=3)
                         consensus_CDR3[sid] = [c_junction, cstart, cend, cprod]
-                        
+                    print(consensusseq)
+                    print(l_next[1])
                     r_junction, rstart, rend, rprod = consensus2CDR3.cdr3_extraction(l_next[1], mincys=3)
-                    if c_junction == r_junction:
-                        if check_VH(l_next[1], bam, info_folder):
-                            IGHD, pos_IGHD, list_insertions, list_deletions, disruption = parse_vcf_IGHD(vcf_complete_path,
-                                                                                                         l_next[1], 290)
-                            l_junction, start, end, prod = [r_junction, rstart, rend, rprod]
-                            major_readn, major_read = l_next
-                            if IGHD == '' or not IGHD:
-                                IGHD = calculateD(major_read, start, end)
+                    ## if the consensus and current seq share 15 aa is enough to assume they are equal
+                    print(c_junction, r_junction)
+                    if c_junction and r_junction:
+                        
+                        if (len(c_junction) > 15) and (len(r_junction) > 15):
+                            cseq = c_junction[:15]
+                            rseq = r_junction[:15]
+                        else:
+                            cseq = c_junction
+                            rseq = r_junction
+                        if cseq == rseq:
+                            if check_VH(l_next[1], bam, info_folder):
+                                IGHD, pos_IGHD, list_insertions, list_deletions, disruption = parse_vcf_IGHD(vcf_complete_path,
+                                                                                                             l_next[1], 290)
+                                l_junction, start, end, prod = [r_junction, rstart, rend, rprod]
+                                major_readn, major_read = l_next
+                                if IGHD == '' or not IGHD:
+                                    IGHD = calculateD(major_read, start, end)
+                            else:
+                                (l_junction, IGHD, start, end,
+                                 major_read, major_readn, prod) = [None] * 7
                         else:
                             (l_junction, IGHD, start, end,
                              major_read, major_readn, prod) = [None] * 7
                     else:
                         (l_junction, IGHD, start, end,
                          major_read, major_readn, prod) = [None] * 7
-                    (l_junction, IGHD, start, end,
-                     major_read, major_readn, prod) = [None] * 7
                     
         except StopIteration:
             pass

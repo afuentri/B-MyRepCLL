@@ -122,10 +122,8 @@ def CDR3_minning(motif, min_cys, all_cys, seq):
         if CDR3 != '' and m <= 50:
             break
         orf_cys = [e for e in all_cys if ((m - e) % 3 == 0) ]
-    
         ## choose min_cys less than 85 nuc from WGXG
         lvalid = [e for e in orf_cys if (m - e) < 85] ##change to omit the fixed value
-    
         if lvalid != []:
             cont_cys = min(lvalid)
         else:
@@ -276,6 +274,6 @@ def cdr3_extraction(fasta, mincys):
     
     if not prod_nature:
         productivity = 'not productive'
-        
+
     return CDR3_nature, start_nature, end_nature, prod_nature   
    
