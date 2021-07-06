@@ -2233,12 +2233,8 @@ def finding_new_junction(d, sid, file_reads, vcf_complete_path, bam, refV_seq, i
     ns = proce.communicate()[0].strip().split()
     ## if BAM file is empty or VH allele is represented with less than 100 reads we do not do this
     ## multiple reads can be due to major JH allele paired with different VHs
-    print(bam)
-    print(d[sid])
-    print(sid)
-    print(int(d[sid]['nreads']))
+    
     if len(ns) > 1:
-        print('yes')
         major_readn, major_read = ns
         # we define major_read as the sequence with more reads first
         list_majors = read_file_simply(file_reads)
@@ -2253,7 +2249,6 @@ def finding_new_junction(d, sid, file_reads, vcf_complete_path, bam, refV_seq, i
                 consensusseq = ''.join(read_file_simply(consensus_seq)[1:])
 
                 # if a read threshold is surpassed or CDR3 sequence is equal to that in the consensus sequence
-                print(l_next[0])
                 if float(l_next[0]) >= (totalreads/100)*3:
                                        
                     if check_VH(l_next[1], bam, info_folder):
@@ -2274,11 +2269,10 @@ def finding_new_junction(d, sid, file_reads, vcf_complete_path, bam, refV_seq, i
                         c_junction, cstart, cend, cprod = consensus2CDR3.cdr3_extraction(consensusseq,
                                                                                          mincys=3)
                         consensus_CDR3[sid] = [c_junction, cstart, cend, cprod]
-                    print(consensusseq)
-                    print(l_next[1])
+                    
                     r_junction, rstart, rend, rprod = consensus2CDR3.cdr3_extraction(l_next[1], mincys=3)
                     ## if the consensus and current seq share 15 aa is enough to assume they are equal
-                    print(c_junction, r_junction)
+                    
                     if c_junction and r_junction:
                         
                         if (len(c_junction) > 15) and (len(r_junction) > 15):

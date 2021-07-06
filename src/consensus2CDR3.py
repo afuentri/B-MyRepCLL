@@ -216,7 +216,6 @@ def get_CDR3(seq, mincys=80):
         else:
             CDR3, start, end = (None, None, None)
         
-    print(CDR3)
     return CDR3, start, end, productive
 
 
