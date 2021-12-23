@@ -1,13 +1,16 @@
 import os
 import sys
+import shutil
 import matplotlib
 import pandas as pd
 import xlsxwriter
+import glob
 import numpy as np
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 from chord import Chord
+import coverage_IGHs
 sns.set(style="whitegrid")
 
 # define tables to use (given as argument)
@@ -18,6 +21,7 @@ run =  sys.argv[2] ## example --> RUN0327
 out = sys.argv[3]
 reads = sys.argv[4]
 resume_Vmapping = sys.argv[5]
+mincov = sys.argv[6]
 
 def clone_plotting(df):
 
@@ -102,7 +106,7 @@ def predicted_status(df):
 
     df['rearrangement'] = df['rearrangement'].str.split('_').str[1]
     df['predicted_status'] = 'polyclonal'
-
+    df['clone_status'] = 'SUBCLONAL'
     s = df['sample_name'].unique().tolist()
     for e in s:
         
@@ -111,9 +115,12 @@ def predicted_status(df):
         
             r = float(n[n['max_diff'] =='YES']['rearrangement'].to_string().split()[1])
             
+            df['clone_status'] = np.where((df['sample_name'] == e) & (df['rearrangement'].astype('float') <= r),
+                                          'CLONAL', df['clone_status'])
+            
             df['predicted_status'] = np.where(df['sample_name'] == e, 
                                                       str(int(r)) + 'CLONE', df['predicted_status']) 
-        
+            
     return df
 
 
@@ -150,12 +157,16 @@ def cdr3chord(df):
           font_size_large="7px").to_html("chord.html")
     
         
-def homology_resume(hom, rescued, outtable, cdr3='default'):
+def homology_resume(hom, rescued, outtable, outcoverage, min_cov, 
+                    cov_table, folder_consensus,
+                    cdr3='default'):
 
 
     """"""
     first_rearrangement = outtable.replace('.xlsx', '_principal-rearrangement.csv')
     top_rearrangement = outtable.replace('.xlsx', '_top3-rearrangement.csv')
+    clonal_rearrangement = outtable.replace('.xlsx', '_clonal-rearrangements.csv')
+
     # define fields for Vgene and Vgroup from the column Vregion
     hom.loc[:, 'Vregion'] = hom['Vregion'].str.replace('D-','-D')
     hom.loc[:, 'Vgene'] = hom['Vregion'].str.split('-').str[:2].str.join('-')
@@ -297,21 +308,17 @@ def homology_resume(hom, rescued, outtable, cdr3='default'):
 	                    'ORF disruption','majorunique_productiveSeq','nreads_majorunique_productiveSeq']
 	
     ## select the max entry for each V gene
-    l = list(hom_to_savef.groupby('sample_name', as_index=False)['reads_mapped_allele'].idxmax())
-    #hom_to_savef = hom_to_savef[hom_to_savef['percent_reads_mapped_Vgene'] > 0.1]
     ## save tables
     hom_to_savef = hom_to_savef.copy()
-    #hom_to_savef.loc[:, 'nrearrangement'] = hom_to_savef.groupby('sample_name')['percent_reads_mapped_Vgene'].rank(ascending=False, method='min')
-    #hom_to_savef.loc[:, 'nrearrangement_allele'] = hom_to_savef.groupby('sample_name')['percent_reads_mapped_Vallele'].rank(ascending=False, method='min')
-    
+    ## chord plot
     cdr3chord(hom_to_savef)
-    print(hom_to_savef.head())
+
     ## predict status
     hom_to_savef['rearrangement'] = hom_to_savef['sample_name'] + '_' + hom_to_savef['nrearrangement'].astype(str)
     
     hom_to_savef = predicted_status(hom_to_savef)
     clone_plotting(hom_to_savef)
-    print(hom_to_savef.head())
+    
     ## colour max value and save table
     l = list(hom_to_savef.groupby('sample_name', as_index=False)['reads_mapped_gene'].idxmax())
     hom_to_savef.style.apply(lambda x: ['background-color: #00ff8c' if x.name in l else '' for i in x],
@@ -328,19 +335,51 @@ def homology_resume(hom, rescued, outtable, cdr3='default'):
     list_samples = hom_to_savef['sample_name'].unique().tolist()
 	
     for i in list_samples:
-	
         n = hom_to_savef[hom_to_savef['sample_name'] == i].nlargest(3,
                                                                     'reads_mapped_gene')
         l2 += n.index.tolist()
-	
+    
     ## save the first three rearrangements for each sample
     hom_to_savef.iloc[l2]
     hom_to_savef.iloc[l2].to_csv(top_rearrangement, sep=',')
-	
-    hom_to_savef.style.apply(lambda x: ['background-color: #00ff8c' if x.name in l else '' for i in x],
+
+    ## calculate coverage of the clonal rearrangements and include coverage info in homology_resume
+    hom_to_savef[hom_to_savef['clone_status'] == 'CLONAL'].to_csv(clonal_rearrangement, sep=',', index=False)
+    coverage_IGHs.calculate_coverage(outcoverage, out, clonal_rearrangement, 10, False, min_cov)
+    ## annotate coverage information
+    covt = pd.read_csv(cov_table, sep=',')
+    colcov = '%{}X'.format(min_cov)
+    covt['col'] = covt['sample_name'].str.replace('-sorted', '')
+    covtab = covt[['col', colcov]]
+    hom_to_savef['col'] = hom_to_savef['sample_name'] + '_' + hom_to_savef['IGHV-J']
+    hom_to_saveff = hom_to_savef.merge(covtab, how='left', on='col')
+
+    ## make accessible consensus sequences from clonal rearrangements
+    list_clonal = hom_to_saveff[hom_to_savef['clone_status'] == 'CLONAL']['col'].unique().tolist()
+    
+    if not os.path.isdir(folder_consensus):
+        os.mkdir(folder_consensus)
+    for ffasta in list_clonal:
+        fasta = glob.glob(os.path.join(out, 'results/consensus_complete/{}*.fa'.format(ffasta)))
+        [shutil.copy(f, folder_consensus) for f in fasta]
+        
+        
+    hom_to_saveff = hom_to_saveff.drop(columns=['col'])
+
+    ## colour max value and save table                                                                                                                                                                     
+    l = list(hom_to_saveff.groupby('sample_name', as_index=False)['reads_mapped_gene'].idxmax())
+    hom_to_saveff.style.apply(lambda x: ['background-color: #00ff8c' if x.name in l else '' for i in x],
+                             axis=1).to_excel(outtable, engine='openpyxl', index=False)
+
+    hom_to_saveff.to_csv(outtable.replace('.xlsx', '.csv'), sep=',')
+    ## save first rearrangement                                                                                                                                                                          
+    hom_to_saveff.iloc[l]
+    hom_to_saveff.iloc[l].to_csv(first_rearrangement, sep=',')
+
+    hom_to_saveff.style.apply(lambda x: ['background-color: #00ff8c' if x.name in l else '' for i in x],
                              axis=1)
 
-    return hom_to_savef
+    return hom_to_saveff
 
 
 def filterFR3(filtered, rest, CDR3='major_CDR3'):
@@ -393,6 +432,64 @@ def filterFR3(filtered, rest, CDR3='major_CDR3'):
     return filtered, rescued
                 
 
+def usage_plots(hom_to_savef2, homt, folder_plots, naleles):
+
+    """"""
+
+    hom_to_savef2 = hom_to_savef2.sort_values(['Vgene', 'Vallele']).reset_index(drop=True)
+
+    # plot general allele and IGHV gene counts
+    # size a4 paper
+    plt.figure(figsize=(naleles/1.3, naleles/3))
+    sns.set(font_scale=naleles/40, style='white')
+
+    ## allele
+    az = sns.barplot(x='Vregion', y='reads_mapped',
+                     data=homt.sort_values('Vregion'))
+    az.set_xticklabels(az.get_xticklabels(), rotation=90)
+
+    plt.tight_layout()
+    name = os.path.join(folder_plots, 'counts-Valleles_' +  str(run) + '.png')
+    plt.savefig(name)
+    plt.gcf().clear()
+
+    ## percent                                                                                                                                                                                             
+    # size a4 paper                                                                                                                                                                                        
+    plt.figure(figsize=(50,30))
+    sns.set(font_scale=3, style='white')
+    allelesJ = sorted(list(hom_to_savef2['J_assigned'].dropna().unique()))
+    ## gene usage run
+    pivot_df = hom_to_savef2.pivot_table(index='Vgene', columns='J_assigned',
+                                        values='reads_mapped_gene',
+                                        aggfunc=sum).fillna(0)
+    plotname = os.path.join(folder_plots, 'counts-genes-IGHVJ_' + str(run) + '.png')
+    # counts
+    ## size a4 paper
+    plt.figure(figsize=(15,8))
+    with sns.color_palette("Paired", 15):
+        az = pivot_df.plot.bar(stacked=True, figsize=(30,15))
+    az.set_xticklabels(az.get_xticklabels(), rotation=90)
+
+    plt.tight_layout()
+    plt.savefig(plotname)
+    plt.gcf().clear()
+
+    # percent
+    pivot_df = hom_to_savef2.pivot_table(index='Vgene', columns='J_assigned',
+                            values='percent_reads_mapped_Vgene',
+                                        aggfunc=sum).fillna(0)
+    plotname = os.path.join(folder_plots, 'percent-genes-IGHVJ_' + str(run) + '.png')
+    ## size a4 paper
+    plt.figure(figsize=(15,8))
+    with sns.color_palette("Paired", 15):
+        az = pivot_df.plot.bar(stacked=True, figsize=(30,15))
+    az.set_xticklabels(az.get_xticklabels(), rotation=90)
+
+    plt.tight_layout()
+    plt.savefig(plotname)
+    plt.gcf().clear()
+
+
 def main():
 
     ## HOMOLOGY RESUMEN TABLE ##
@@ -411,9 +508,12 @@ def main():
     
     outtable = os.path.join(out, 'homology_resume_{}.xlsx'.format(run))
     outtable2 = os.path.join(out, 'homology_resume_filterFR3_{}.xlsx'.format(run))
+    outcoverage = os.path.join(out, 'coverage')
+
+    cov_table = os.path.join(outcoverage, 'samplecovstats.csv')
     filter_FR3 = os.path.join(out, 'homology_table_filterFR3.csv')
     folder_plots = os.path.join(out, 'usage_plots')
-        
+    folder_consensus = os.path.join(out, 'consensus_sequences_clonal')    
     # read homology_table.csv
     homt = pd.read_csv(input_table, sep=',')
 
@@ -432,106 +532,35 @@ def main():
 
     ## filter rearrangement if 90% of reads are FR3 supported
     ## add read % and add or percent_reads_rearrangement > 92
-    
     hom_filterFR3 = hom_filt[(hom_filt['reads_mapped_fr3']/hom_filt['reads_mapped'] < 0.92)] ## or percent reads >90
     hom_drop2 = hom_filt[hom_filt['reads_mapped_fr3']/hom_filt['reads_mapped'] >= 0.92] ## and percent reads < 90
     result = pd.concat([hom_drop, hom_drop2], ignore_index=True)
     
     ## iterate and for each of them, sum the reads totally and by fragments
-    ### reads will be added to the major rearrangement of the same VH family if CDR3 is equal
-
-    #hom_filterFR3def = filterFR3(hom_filterFR3.copy(), result, CDR3='CDR3')
-    #hom_filterFR3deff = hom_filterFR3def[hom_filterFR3def['reads_mapped_fr3']/hom_filterFR3def['reads_mapped'] < 0.92]
-    
+    ### reads will be added to the major rearrangement of the same VH family if CDR3 is equal    
     hom_filterFR3defmajor, rescued = filterFR3(hom_filterFR3.reset_index().copy(), result, CDR3='major_CDR3')
-       
-    #hom_filterFR3deffmajor = hom_filterFR3defmajor[hom_filterFR3defmajor['reads_mapped_fr3']/hom_filterFR3defmajor['reads_mapped'] < 0.92]
-    #print(len(hom_filterFR3defmajor), len(hom_filterFR3deffmajor))
-
     hom_filterFR3.to_csv(filter_FR3, sep=',')
              
     hom_to_savef2 = homology_resume(hom_filterFR3defmajor.reset_index(), rescued,
                                     outtable2.replace('.xlsx', '-majorcdr3.xlsx'),
+                                    outcoverage, mincov, cov_table, folder_consensus,
                                     cdr3='major')
                
+    
     ## DATABASE UPDATE ##
+    
     alleles = hom_to_savef2['Vallele'].nunique()
     genes = hom_to_savef2['Vgene'].nunique()
+    naleles = len(homt['Vregion'].unique().tolist())
     print('n unique IGHV alleles: {}'.format(alleles))
     print('n unique IGHV genes: {}'.format(genes))
     
     ## plots
     if not os.path.isdir(folder_plots):
         os.mkdir(folder_plots)
-    naleles = len(homt['Vregion'].unique().tolist())
     
-    hom_to_savef2 = hom_to_savef2.sort_values(['Vgene', 'Vallele']).reset_index(drop=True)
-    
-    # plot general allele and IGHV gene counts
-    # size a4 paper
-    plt.figure(figsize=(naleles/1.3, naleles/3))
-    sns.set(font_scale=naleles/40, style='white')
-    
-    ## allele
-    az = sns.barplot(x='Vregion', y='reads_mapped',
-                     data=homt.sort_values('Vregion'))
-    az.set_xticklabels(az.get_xticklabels(), rotation=90)
-    
-    plt.tight_layout()
-    name = os.path.join(folder_plots, 'counts-Valleles_' +  str(run) + '.png')
-    plt.savefig(name)
-    plt.gcf().clear()
-    
-    ## percent
-    
-    # size a4 paper
-    plt.figure(figsize=(50,30))
-    sns.set(font_scale=3, style='white')
-    ## allele
-    ## normal
-    #az = sns.barplot(x="Vallele", y="percent_reads_mapped_Vallele", data=hom_to_savef2)
-    #az.set_xticklabels(az.get_xticklabels(), rotation=90)
-    
-    #name = os.path.join(folder_plots, 'percent-alleles_v' + str(run) + '.png')
-    #plt.tight_layout()
-    #plt.savefig(name)
-    #plt.gcf().clear()
-    
-    allelesJ = sorted(list(hom_to_savef2['J_assigned'].dropna().unique()))
-    
-    ## gene usage run
-    pivot_df = hom_to_savef2.pivot_table(index='Vgene', columns='J_assigned',
-                                        values='reads_mapped_gene',
-                                        aggfunc=sum).fillna(0)
-    
-    plotname = os.path.join(folder_plots, 'counts-genes-IGHVJ_' + str(run) + '.png')
-    
-    # counts
-    ## size a4 paper
-    plt.figure(figsize=(15,8))
-    with sns.color_palette("Paired", 15):
-        az = pivot_df.plot.bar(stacked=True, figsize=(30,15))
-    az.set_xticklabels(az.get_xticklabels(), rotation=90)
-       
-    plt.tight_layout()
-    plt.savefig(plotname)
-    plt.gcf().clear()
-    
-    # percent
-    pivot_df = hom_to_savef2.pivot_table(index='Vgene', columns='J_assigned', 
-                            values='percent_reads_mapped_Vgene',
-                                        aggfunc=sum).fillna(0)
-    plotname = os.path.join(folder_plots, 'percent-genes-IGHVJ_' + str(run) + '.png')
-    
-    ## size a4 paper
-    plt.figure(figsize=(15,8))
-    with sns.color_palette("Paired", 15):
-        az = pivot_df.plot.bar(stacked=True, figsize=(30,15))
-    az.set_xticklabels(az.get_xticklabels(), rotation=90)
+    usage_plots(hom_to_savef2, homt, folder_plots, naleles)
         
-    plt.tight_layout()
-    plt.savefig(plotname)
-    plt.gcf().clear()
 
 if __name__ == "__main__":
     main()

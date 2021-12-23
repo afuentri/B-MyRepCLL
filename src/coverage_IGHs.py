@@ -8,10 +8,11 @@ import string
 import re
 import os
 import argparse
-import pipeline_fragments
-import arguments_parser_cov
 import glob
 import time
+import inspect
+import pipeline
+import subprocess
 ## plotting
 import matplotlib
 import pandas as pd
@@ -29,7 +30,7 @@ from log_manager import log_setup
 from dir_management import *
 
 ### FUNCTIONS ###
-def extract_args(args):
+def extract_args():
 
     """"""
     # global
@@ -40,14 +41,21 @@ def extract_args(args):
     global ow
     global min_cov
     
-    # arguments parse
-    out_folder = args.dest
-    wd = args.inputf
-    target_table = args.table
-    proc = args.processes
-    ow = args.owrt
-    min_cov = args.mincov
-    
+
+def parallel(CMD, p, LOG): ## make independent function with execute
+
+    """"""
+    parallel = ('parallel --compress --joblog {} '
+                '-j {} :::: {}').format(LOG, p, CMD)
+
+    execute(parallel)
+                
+
+def execute(CMD):
+
+    """"""
+    subprocess.call([CMD], shell=True, executable='/bin/bash')
+
     
 def create_dict_list(tab, field=2):
 
@@ -63,22 +71,22 @@ def create_dict_list(tab, field=2):
     return d
 
 
-def prepare_bedgraph(bam, fcmd, out_folder):
+def prepare_bedgraph(bam, fcmd, out_folder, ow):
 
     """"""
-    pipeline_fragments.owrt=ow
-    overwrite = pipeline_fragments.do_overwrite(out_folder, '.bedGraph')
+    pipeline.owrt=ow
+    overwrite = pipeline.do_overwrite(out_folder, '.bedGraph')
     if overwrite:
         log.debug('Starting bedgraph generation. Out folder %s', out_folder)
         path_bedgraph = os.path.join(out_folder, os.path.basename(bam).replace('.bam', '.bedGraph'))
         fcmd.write('bedtools genomecov -bg -ibam {} > {}\n'.format(bam, path_bedgraph))
 
 
-def prepare_cov(bam, fcmd, out_folder, list_beds):
+def prepare_cov(bam, fcmd, out_folder, list_beds, ow, wd):
 
     """"""
-    pipeline_fragments.owrt=ow
-    overwrite = pipeline_fragments.do_overwrite(out_folder, '.cov')
+    pipeline.owrt=ow
+    overwrite = pipeline.do_overwrite(out_folder, '.cov')
     folder_refs = os.path.join(wd, 'rearrangement_refs')
     
     if overwrite:
@@ -103,16 +111,13 @@ def prepare_cov(bam, fcmd, out_folder, list_beds):
             
     
 ## main
-def main():
+def calculate_coverage(out_folder, wd, target_table, proc, ow, min_cov):
 
     """Main script for pipeline intro"""
-    # Get arguments
-    args = arguments_parser_cov.parse_args()
-    extract_args(args)
-    
+                        
     ## Define logging
-    log_setup(args)
-
+    #log_setup()
+    
     ## create folders
     folder_bedgraphs = os.path.join(out_folder, 'bedgraphs')
     create_dir(folder_bedgraphs)
@@ -130,9 +135,9 @@ def main():
     ## calculate cov per sample from sorted indexed bams for the whole rearrangement
     path_bams = os.path.join(wd, 'bams_specific_rearrangements')
     # define cdate 
-    pipeline_fragments.cdate=time.strftime("%d-%m-%Y_%H-%M-%S")
-    path_CMD_bedgraph, path_LOG_bedgraph = pipeline_fragments.create_CMD('bedGraph', out_folder)
-    path_CMD_cov, path_LOG_cov = pipeline_fragments.create_CMD('cov', out_folder)
+    pipeline.cdate=time.strftime("%d-%m-%Y_%H-%M-%S")
+    path_CMD_bedgraph, path_LOG_bedgraph = pipeline.create_CMD('bedGraph', out_folder)
+    path_CMD_cov, path_LOG_cov = pipeline.create_CMD('cov', out_folder)
     fcmd_bedgraph = open(path_CMD_bedgraph, 'w')
     fcmd_cov = open(path_CMD_cov, 'w')
     rearrangements_list = []
@@ -142,32 +147,33 @@ def main():
         bam = glob.glob(path_bams + '/' + sample_id + '*.bam')
         if len(bam) > 0:
             ## calculate coverage
-            prepare_bedgraph(bam[0], fcmd_bedgraph, folder_bedgraphs)
+            prepare_bedgraph(bam[0], fcmd_bedgraph, folder_bedgraphs, ow)
             rearrangements_list = prepare_cov(bam[0], fcmd_cov,
-                                              folder_cov, rearrangements_list)
+                                              folder_cov, rearrangements_list,
+                                              ow, wd)
         
     fcmd_bedgraph.close()
     fcmd_cov.close()
-    pipeline_fragments.parallel(path_CMD_bedgraph, proc, path_LOG_bedgraph)
-    pipeline_fragments.parallel(path_CMD_cov, proc, path_LOG_cov)
+    parallel(path_CMD_bedgraph, proc, path_LOG_bedgraph)
+    parallel(path_CMD_cov, proc, path_LOG_cov)
 
     ### MEAN ALL FILES
     ## FOF files
     bg_fof = glob.glob(folder_bedgraphs + '/*.bedGraph')
     
-    fofbg = pipeline_fragments.list2file(bg_fof, 'bedGraphs.fof', folder_bedgraphs)
+    fofbg = pipeline.list2file(bg_fof, 'bedGraphs.fof', folder_bedgraphs)
     cov_fof = glob.glob(folder_cov + '/IGH-*.cov')
     
-    fofcov = pipeline_fragments.list2file(cov_fof, 'cov.fof', folder_cov)
+    fofcov = pipeline.list2file(cov_fof, 'cov.fof', folder_cov)
 
     ## cov stats per sample
     path0 = os.path.join(out_folder, 'samplecovstats.csv')
-    pipeline_fragments.execute('python /srv/dev/IGH_programming/meanpersample.py {} {} > {}'.format(fofcov, min_cov, path0))
+    execute('python /srv/dev/IGH_programming/meanpersample.py {} {} > {}'.format(fofcov, min_cov, path0))
     ## python bedgraphs mean
     path1 = os.path.join(folder_bedgraphs, 'all.bedgraph')
     path2 = os.path.join(folder_cov, 'all.cov')
-    pipeline_fragments.execute('python /srv/dev/IGH_programming/mean_bedgraph.py {} > {}'.format(fofbg, path1))
-    pipeline_fragments.execute('python /srv/dev/IGH_programming/mean_covperbase_freebayes.py {} > {}'.format(fofcov, path2))
+    execute('python /srv/dev/IGH_programming/mean_bedgraph.py {} > {}'.format(fofbg, path1))
+    execute('python /srv/dev/IGH_programming/mean_covperbase_freebayes.py {} > {}'.format(fofcov, path2))
 
     ## PLOTS PER SAMPLE AND REARRANGEMENT
     for f in cov_fof:
@@ -207,15 +213,15 @@ def main():
     for b in rearrangements_list:
     
         bg_fof = glob.glob(folder_bedgraphs + '/*' + b + '*.bedGraph')
-        fofbg = pipeline_fragments.list2file(bg_fof, 'bedGraphs_' + b + '.fof', folder_bedgraphs)
+        fofbg = pipeline.list2file(bg_fof, 'bedGraphs_' + b + '.fof', folder_bedgraphs)
         cov_fof = glob.glob(folder_cov + '/*' + b + '*.cov')
-        fofcov = pipeline_fragments.list2file(cov_fof, 'cov_' + b + '.fof', folder_cov)
+        fofcov = pipeline.list2file(cov_fof, 'cov_' + b + '.fof', folder_cov)
 
         path1 = os.path.join(bedgraph_per_rearrangement, 'all_' + b + '.bedgraph')
         path2 = os.path.join(cov_per_rearrangement, 'all_' + b + '.cov')
 
-        pipeline_fragments.execute('python /srv/dev/IGH_programming/mean_bedgraph.py {} > {}'.format(fofbg, path1))
-        pipeline_fragments.execute('python /srv/dev/IGH_programming/mean_covperbase_freebayes.py {} > {}'.format(fofcov, path2))
+        execute('python /srv/dev/IGH_programming/mean_bedgraph.py {} > {}'.format(fofbg, path1))
+        execute('python /srv/dev/IGH_programming/mean_covperbase_freebayes.py {} > {}'.format(fofcov, path2))
 
         # range for plot
         
@@ -245,7 +251,7 @@ def main():
     df.positions = df.positions.astype(int)
     df.vals = df.vals.astype(float)
     df.to_csv(os.path.join(out_folder, 'covperrearrangement.csv'), sep=',')
-    print 'DataFrame to file'
+    
     #g = sns.catplot(x='positions', y='vals', hue='cols', data=df)
     sns.set_style("whitegrid")
     g = sns.lineplot(x='positions', y='vals', data=df)

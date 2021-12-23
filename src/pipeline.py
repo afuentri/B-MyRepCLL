@@ -966,7 +966,7 @@ def calculate_basal(bam_listV, regions_listV):
     policlonal = False
     log.info('Default basal percent of reads is %s', new_basal)
     for bam in bam_listV:
-        if 'policlonal' in bam:
+        if 'polyclonal' in bam:
             policlonal = True
             sample_name = os.path.basename(bam).replace('-sorted.bam', '')
             log.info('policlonal sample detected: %s, calculating new basal filter...', 
