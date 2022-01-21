@@ -17,8 +17,8 @@ import subprocess
 import matplotlib
 import pandas as pd
 import seaborn as sns
-#sns.set(style="whitegrid")
-sns.set_style("whitegrid")
+#sns.set(style="whitegrid", font_scale=2)
+#sns.set_style("whitegrid")
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -177,7 +177,8 @@ def calculate_coverage(out_folder, wd, target_table, proc, ow, min_cov):
 
     ## PLOTS PER SAMPLE AND REARRANGEMENT
     for f in cov_fof:
-        
+        plt.figure(figsize=(25,14))
+        sns.set(style="whitegrid", font_scale=2)
         d = pd.DataFrame()
         ld = read_file_simply(f)
         l1 = []
@@ -192,7 +193,7 @@ def calculate_coverage(out_folder, wd, target_table, proc, ow, min_cov):
         d['coverage'] = l3
         d.coverage = d.coverage.astype(float)
         d.positions = d.positions.astype(int)
-        g = sns.lineplot(x='positions', y='coverage', data=d)
+        g = sns.lineplot(x='positions', y='coverage', data=d, lw=5)
         ax1 = g.axes
         ax1.grid(False)
         ax1.axhline(int(min_cov), ls='--', c='r')

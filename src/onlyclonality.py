@@ -432,7 +432,7 @@ def filterFR3(filtered, rest, CDR3='major_CDR3'):
     return filtered, rescued
                 
 
-def usage_plots(hom_to_savef2, homt, folder_plots, naleles):
+def usage_plots(hom_to_savef2, homt, folder_plots, naleles, tag=''):
 
     """"""
 
@@ -449,12 +449,13 @@ def usage_plots(hom_to_savef2, homt, folder_plots, naleles):
     az.set_xticklabels(az.get_xticklabels(), rotation=90)
 
     plt.tight_layout()
-    name = os.path.join(folder_plots, 'counts-Valleles_' +  str(run) + '.png')
+    name = os.path.join(folder_plots, 'counts-Valleles_{}{}.png'.format(tag, str(run)))
     plt.savefig(name)
     plt.gcf().clear()
+        
+    ## percent
 
-    ## percent                                                                                                                                                                                             
-    # size a4 paper                                                                                                                                                                                        
+    # size a4 paper
     plt.figure(figsize=(50,30))
     sns.set(font_scale=3, style='white')
     allelesJ = sorted(list(hom_to_savef2['J_assigned'].dropna().unique()))
@@ -462,7 +463,7 @@ def usage_plots(hom_to_savef2, homt, folder_plots, naleles):
     pivot_df = hom_to_savef2.pivot_table(index='Vgene', columns='J_assigned',
                                         values='reads_mapped_gene',
                                         aggfunc=sum).fillna(0)
-    plotname = os.path.join(folder_plots, 'counts-genes-IGHVJ_' + str(run) + '.png')
+    plotname = os.path.join(folder_plots, 'counts-genes-IGHVJ_{}{}.png'.format(tag, str(run)))
     # counts
     ## size a4 paper
     plt.figure(figsize=(15,8))
@@ -478,7 +479,7 @@ def usage_plots(hom_to_savef2, homt, folder_plots, naleles):
     pivot_df = hom_to_savef2.pivot_table(index='Vgene', columns='J_assigned',
                             values='percent_reads_mapped_Vgene',
                                         aggfunc=sum).fillna(0)
-    plotname = os.path.join(folder_plots, 'percent-genes-IGHVJ_' + str(run) + '.png')
+    plotname = os.path.join(folder_plots, 'percent-genes-IGHVJ_{}{}.png'.format(tag, str(run)))
     ## size a4 paper
     plt.figure(figsize=(15,8))
     with sns.color_palette("Paired", 15):
@@ -560,6 +561,10 @@ def main():
         os.mkdir(folder_plots)
     
     usage_plots(hom_to_savef2, homt, folder_plots, naleles)
+    samples = hom_to_savef2['sample_name'].unique().tolist()
+    for s in samples:
+        ds = hom_to_savef2[hom_to_savef2['sample_name'] == s]
+        usage_plots(ds, homt, folder_plots, naleles, tag='{}-'.format(s))
         
 
 if __name__ == "__main__":
