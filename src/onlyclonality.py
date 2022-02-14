@@ -73,8 +73,11 @@ def plot_clones(df_clonal, n):
     plt.gcf().clear()
 
 
-def predicted_status(df):
+def predicted_status(dft):
 
+    """"""
+    ## we will filter out all rearrangements below 0.1
+    df = dft[dft['percent_reads_mapped_Vgene'] > 0.1].reset_index(drop=True)
     samples = df['sample_name'].unique().tolist()
 
     for e in samples:
@@ -118,9 +121,9 @@ def predicted_status(df):
             df['clone_status'] = np.where((df['sample_name'] == e) & (df['rearrangement'].astype('float') <= r),
                                           'CLONAL', df['clone_status'])
             
-            df['predicted_status'] = np.where(df['sample_name'] == e, 
-                                                      str(int(r)) + 'CLONE', df['predicted_status']) 
-            
+            df['predicted_status'] = np.where(df['sample_name'] == e,
+                                              str(int(r)) + 'CLONE', df['predicted_status'])
+    
     return df
 
 
@@ -562,9 +565,10 @@ def main():
     
     usage_plots(hom_to_savef2, homt, folder_plots, naleles)
     samples = hom_to_savef2['sample_name'].unique().tolist()
-    for s in samples:
-        ds = hom_to_savef2[hom_to_savef2['sample_name'] == s]
-        usage_plots(ds, homt, folder_plots, naleles, tag='{}-'.format(s))
+    if len(samples) <= 30:
+        for s in samples:
+            ds = hom_to_savef2[hom_to_savef2['sample_name'] == s]
+            usage_plots(ds, homt, folder_plots, naleles, tag='{}-'.format(s))
         
 
 if __name__ == "__main__":

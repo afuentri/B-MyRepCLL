@@ -249,14 +249,14 @@ def bbduk_trimming(dic, out, merged_folder, fastqs_folder, pairs,
 
                 CMD_trimming = ('bbduk in1={} in2={} out1={} out2={} ref={} ktrim=l '
                                 'k=21 hdist=1 mink=18 restrictleft=30 qtrim=rl'
-                                ' trimq=15 minlength=50 stats={}'
+                                ' trimq=30 minlength=50 stats={}'
                                 ' refstats={}').format(merged_name, merged_mate, trimmed_name, 
                                                        trimmed_mate, adapters_file, stats_file, refstats_file)
             elif mode == 'right':
 
                 CMD_trimming = ('bbduk in1={} in2={} out1={} out2={} ref={} ktrim=r'
                                 ' k=21 hdist=1 mink=18 restrictright=30 qtrim=rl '
-                                'trimq=15 minlength=50 stats={}'
+                                'trimq=30 minlength=50 stats={}'
                                 ' refstats={}').format(merged_name, merged_mate, trimmed_name, 
                                                        trimmed_mate, adapters_file, stats_file, refstats_file)
 
@@ -264,13 +264,13 @@ def bbduk_trimming(dic, out, merged_folder, fastqs_folder, pairs,
             # single end mode
             if mode == 'left':
                 CMD_trimming = ('bbduk in1={} out1={} ref={} ktrim=l k=21 hdist=1'
-                                ' mink=18 restrictleft=30 qtrim=rl trimq=15 minlength=50'
+                                ' mink=18 restrictleft=30 qtrim=rl trimq=30 minlength=50'
                                 ' stats={} refstats={}').format(merged_name, trimmed_name, 
                                                                 adapters_file, stats_file, refstats_file)
 
             elif mode == 'right':
                 CMD_trimming = ('bbduk in1={} out1={} ref={} ktrim=r k=21 hdist=1'
-                                'mink=18 restrictright=30 qtrim=rl trimq=15 minlength=50'
+                                'mink=18 restrictright=30 qtrim=rl trimq=30 minlength=50'
                                 'stats={} refstats={}').format(merged_name, 
                                                                             trimmed_name, 
                                                                             adapters_file, 
@@ -2362,73 +2362,46 @@ def bams_specific_read(list_bams, out, vcf_folder,
             kname = '{}_{}'.format(knam, refv)
 
             if int(d[kname]['nreads']) >= 100:
-                vcf_incomplete_path = os.path.join(vcf_folder, kname)
-                vcf_complete_path = glob.glob(vcf_incomplete_path + '*.vcf.gz')[0]
-                refV_seq = Vdict[refv]
-                refJ = rest.replace('-sorted.bam','')
-                
-                refJ_seq = Jdict[refJ]
-                
-                #seq_junction = junctiond[kname]
-                
-                f_reads = os.path.join(out, (kname + '_uniqueread_counts.txt'))
-                consensus_seq = os.path.join(consensus_folder, (kname + '_' + refJ + '-fb.fa'))
-                list_seqs.append(f_reads)
-                new_junction, IGHD, start, end, seq, seqn, prod = finding_new_junction(d, kname, f_reads,
-                                                                                 vcf_complete_path,
-                                                                                       BAM, refV_seq,
-                                                                                       info_folder,
-                                                                                       consensus_seq)
-                print(new_junction, IGHD, start, end, seq, seqn, prod)
-                
-                if not seq or not new_junction:
-                    read_CDR3 = ''
-                else:
-                    print(start, end)
-                    read_CDR3 = seq[start:end]
-                
-                if new_junction:
-                    major_read_np = nspscalculation(new_junction, refV_seq,
-                                                    refJ_seq, IGHD)
-                ## define percent junction for non junction rearrangement
-                ## LOOK FOR THE JUNCTION IN BAM ONLY IF IT EXISTS
-                #if isinstance(seq_junction, list):
-                #    list_junction = [t for t in seq_junction if t != '']
-                    
-                #    for s in list_junction:
-                        
-                #        original_junction = s
-                #        # if the original region is > 20% in BAMS
-                #        percent_junction = major_reads_junction(BAM, s, f_reads)
-                #        # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
-                #        # put in IGHD extraction part
-                        
-                #elif seq_junction != '':
-                #    original_junction = seq_junction
-                #    # if the original region is > 20% in BAMS
-                #    percent_junction = major_reads_junction(BAM, seq_junction, f_reads)
-                #    # ori_read_np = nspscalculation(seq, refV_seq, refJ_seq, IGHD)
-                    
-                    
-                
-                #else:
-                #    original_junction = ''
-                #    percent_junction = 0
-                   
-                #d[kname]['ori_junction'] = original_junction
-                #d[kname]['perc_ori_junction'] = percent_junction
-                if not IGHD:
-                    IGHD = ''
-                d[kname]['new_seq'] = seq
-                d[kname]['nreads_new_seq'] = seqn
-                d[kname]['new_CDR3'] = new_junction
-                d[kname]['new_IGHD'] = IGHD
-                CDR32fasta([IGHD], out, fastaD_path)
-                CDR32fasta([read_CDR3], out, fasta_path)
-                fasta_IGHD_list.append(fastaD_path)
-                fasta_list.append(fasta_path)
-                
-                d[kname]['prod'] = prod
+            	vcf_incomplete_path = os.path.join(vcf_folder, kname)
+            	vcf_complete_path = glob.glob(vcf_incomplete_path + '*.vcf.gz')[0]
+            	refV_seq = Vdict[refv]
+            	refJ = rest.replace('-sorted.bam','')
+            	
+            	refJ_seq = Jdict[refJ]
+            	
+            	#seq_junction = junctiond[kname]
+            	
+            	f_reads = os.path.join(out, (kname + '_uniqueread_counts.txt'))
+            	consensus_seq = os.path.join(consensus_folder, (kname + '_' + refJ + '-fb.fa'))
+            	list_seqs.append(f_reads)
+            	new_junction, IGHD, start, end, seq, seqn, prod = finding_new_junction(d, kname, f_reads,
+            	                                                                 vcf_complete_path,
+            	                                                                       BAM, refV_seq,
+            	                                                                       info_folder,
+            	                                                                       consensus_seq)
+            	            
+            	if not seq or not new_junction:
+            	    read_CDR3 = ''
+            	else:
+            	    print(start, end)
+            	    read_CDR3 = seq[start:end]
+            	
+            	if new_junction:
+            	    major_read_np = nspscalculation(new_junction, refV_seq,
+            	                                    refJ_seq, IGHD)
+            	
+            	if not IGHD:
+            	    IGHD = ''
+            	d[kname]['new_seq'] = seq
+            	d[kname]['nreads_new_seq'] = seqn
+            	d[kname]['new_CDR3'] = new_junction
+            	d[kname]['new_IGHD'] = IGHD
+            	CDR32fasta([IGHD], out, fastaD_path)
+            	CDR32fasta([read_CDR3], out, fasta_path)
+            	fasta_IGHD_list.append(fastaD_path)
+            	fasta_list.append(fasta_path)
+            	
+            	d[kname]['prod'] = prod
 
             else:
                 d[kname]['new_seq'] = 'not calculated'
