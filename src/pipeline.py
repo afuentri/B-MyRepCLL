@@ -2341,7 +2341,7 @@ def calculateD(clean_seq, real_start, real_end):
 
 def bams_specific_read(list_bams, out, vcf_folder,
                        homology_folder, Vdict, Jdict, d, info_folder,
-                       consensus_folder):
+                       consensus_folder, cdr3simp=False):
 
     """"""
     overwrite = do_overwrite(out, '.txt')
@@ -2360,8 +2360,8 @@ def bams_specific_read(list_bams, out, vcf_folder,
             fasta_path = fastaD_path.replace('-IGHD', '')
             knam, refv, rest = os.path.basename(BAM).split('_')
             kname = '{}_{}'.format(knam, refv)
-
-            if int(d[kname]['nreads']) >= 100:
+            
+            if int(d[kname]['nreads']) >= 100 or not cdr3simp:
             	vcf_incomplete_path = os.path.join(vcf_folder, kname)
             	vcf_complete_path = glob.glob(vcf_incomplete_path + '*.vcf.gz')[0]
             	refV_seq = Vdict[refv]
@@ -3023,10 +3023,16 @@ def main():
     #                                                  folder_completevcfs)
     if not clonal:
         # get unique reads from bam_specific_rearrangements
-        list_uniq_reads, d_hom, DH_list = bams_specific_read(list_spec_bams, uniq_bam_sequences,
-                                                             folder_completevcfs, homology_folder,
-                                                             ref_dict, ref_dictJ, d_hom,
-                                                             info_folder, consensus_complete)
+        if args.cdr3s:
+            list_uniq_reads, d_hom, DH_list = bams_specific_read(list_spec_bams, uniq_bam_sequences,
+                                                                 folder_completevcfs, homology_folder,
+                                                                 ref_dict, ref_dictJ, d_hom,
+                                                                 info_folder, consensus_complete, True)
+        else:
+            list_uniq_reads, d_hom, DH_list = bams_specific_read(list_spec_bams, uniq_bam_sequences,
+                                                                 folder_completevcfs, homology_folder,
+                                                                 ref_dict, ref_dictJ, d_hom,
+                                                                 info_folder, consensus_complete)
 
     # BLAST CDR3
     #blast_list = prepare_CDR3_blast(fasta_IGHD_list, fblast_CDR3)
