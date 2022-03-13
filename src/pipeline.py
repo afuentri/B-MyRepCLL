@@ -1319,21 +1319,34 @@ def homology_parsing(alignment_list, d, g, field, field2):
                 k = '{}_{}'.format(k.split('_')[0].replace('123456789',
                                                            '-'), k.split('_')[1])
             if k in d:
-        
+                hom = 0.0
                 for e in range(len(l)):
+                    
                     if l[e].startswith('# Length'):
+                        
                         h = l[e].replace("#","") + ';' + l[e + 1].replace("#","")
                         hom = h.split('(')[1].replace(")","").replace("%","")
-                        if float(hom) > 85:
-                            a = '(valid)'
-                            if float(hom) >= 98:
-                                mut_status = 'UM'
-                            else:
-                                mut_status = 'MM'
+                       
+                    
+                    elif l[e].startswith("# Gaps"):
+                        
+                        ngaps = l[e].split('/')[0].split(' ')[-1]
+                        if int(ngaps) > 0:
+                            oldmatch = int(h.split('/')[0].split(' ')[-1])
+                            leng = int(h.split('/')[1].split(' ')[0])
+                            hom = ((oldmatch + (float(ngaps) - 1))/leng)*100
+                            h = '{}; gaphomology: {}'.format(h, round(hom, 2))
+                            
+                    ## calculate mutational status    
+                    if float(hom) > 85:
+                        a = '(valid)'
+                        if float(hom) >= 98:
+                            mut_status = 'UM'
                         else:
-                            a = '(not valid)'
-                            mut_status = ''
-
+                            mut_status = 'MM'
+                    else:
+                        a = '(not valid)'
+                        mut_status = ''
 
             h = h + a
             
@@ -1344,6 +1357,7 @@ def homology_parsing(alignment_list, d, g, field, field2):
                 g[k][field] = h
                 g[k][field2] = mut_status
 
+                
     ## include empty homology for samples in dictionary without homology data
     for r in d.keys():
         if not field in d[r]:
