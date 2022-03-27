@@ -349,6 +349,7 @@ def homology_resume(hom, rescued, outtable, outcoverage, min_cov,
     ## calculate coverage of the clonal rearrangements and include coverage info in homology_resume
     hom_to_savef[hom_to_savef['clone_status'] == 'CLONAL'].to_csv(clonal_rearrangement, sep=',', index=False)
     coverage_IGHs.calculate_coverage(outcoverage, out, clonal_rearrangement, 10, False, min_cov)
+     
     ## annotate coverage information
     covt = pd.read_csv(cov_table, sep=',')
     colcov = '%{}X'.format(min_cov)

@@ -165,7 +165,7 @@ def calculate_coverage(out_folder, wd, target_table, proc, ow, min_cov):
     cov_fof = glob.glob(folder_cov + '/IGH-*.cov')
     
     fofcov = pipeline.list2file(cov_fof, 'cov.fof', folder_cov)
-
+    
     ## cov stats per sample
     path0 = os.path.join(out_folder, 'samplecovstats.csv')
     execute('python /srv/dev/IGH_programming/meanpersample.py {} {} > {}'.format(fofcov, min_cov, path0))
@@ -259,7 +259,7 @@ def calculate_coverage(out_folder, wd, target_table, proc, ow, min_cov):
     ax = g.axes
     ax.grid(False)
     #ax.axhline(int(min_cov), ls='--', c='r')
-    ax.set_ylim(ymin=0)
+    ax.set_ylim(bottom=0)
     ax.set_title('Mean coverage depth per rearrangement')
     ax.set(xlabel='Base', ylabel='Coverage Depth')
     plt.savefig(os.path.join(out_folder, 'mean_rearrangements.png'))

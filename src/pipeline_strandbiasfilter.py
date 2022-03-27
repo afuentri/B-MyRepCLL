@@ -552,34 +552,43 @@ def bcftools_consensus(fcmd, fasta_path, vcf, refV, current_ref, bam_path, sampl
     fcmd.write(CMD_consensus + '\n')
 
 
-def bcftools_consensus_complete(fcmd, bam, fasta_path_freebayes, path_current_ref, out, length_VH):
+def bcftools_consensus_complete(fcmd, fcmd2, bam, fasta_path_freebayes, path_current_ref, out, length_VH):
 
     """"""
     vcf_temp_fb = os.path.basename(bam).replace('-sorted.bam', '-fb.vcf.gz')
     vcf_temp_fb_path = os.path.join(out, vcf_temp_fb)
+    vcf_temp1_fb_path = vcf_temp_fb_path.replace('.vcf.gz', '-nofilter.vcf.gz')
     
-    CMD_consensus_freebayes = ('freebayes -f {0} -m 0 --ploidy 1 --min-coverage {6}'
-                               ' --genotype-qualities --strict-vcf -F {4} -C {5} {1} '
-                               '| bgzip -c > {2}; tabix -f -p vcf {2}; bcftools'
-                               ' consensus -f {0} {2} -o {3}').format(path_current_ref, 
-                                                                      bam, vcf_temp_fb_path,
-                                                                      fasta_path_freebayes,
-                                                                      frec, minalt, mincoverage)
+    CMD_freebayes = ('freebayes -f {0} -m 0 --ploidy 1 --min-coverage {5}'
+                               ' --genotype-qualities --strict-vcf -F {3} -C {4} {1} '
+                               '| bgzip -c > {2}').format(path_current_ref, 
+                                                          bam, vcf_temp1_fb_path,  
+                                                          frec, minalt, mincoverage)
 
+    CMD_consensus = ('bgzip -c {3} > {1}; tabix -f -p vcf {1}; bcftools consensus -f {0} {1} -o {2}').format(path_current_ref,
+                                                                                                             vcf_temp_fb_path,
+                                                                                                             fasta_path_freebayes,
+                                                                                                             vcf_temp_fb_path.replace(".vcf.gz",".vcf"))
     vcf_temp_VH_path = vcf_temp_fb_path.replace('-fb.vcf.gz','-VH-fb.vcf.gz')
-    CMD_consensus_freebayesVH = ('freebayes -f {0} -r {7}:0-{8} -m 0 --ploidy 1 --min-coverage {6}'
-                                 ' --genotype-qualities --strict-vcf -F {4} -C {5} {1} '
-                                 '| bgzip -c > {2}; tabix -f -p vcf {2}; bcftools '
-                                 'consensus -f {0} {2} -o {3}').format(path_current_ref, bam,
-                                                                       vcf_temp_VH_path,
-                                                                       frec, minalt, mincoverage,
-                                                                       os.path.basename(path_current_ref).replace('.fa', ''),
-                                                                       length_VH)
+    vcf_temp1_VH_path = vcf_temp_VH_path.replace('.vcf.gz','-nofilter.vcf.gz')
+    CMD_freebayesVH = ('freebayes -f {0} -r {6}:0-{7} -m 0 --ploidy 1 --min-coverage {5}'
+                                 ' --genotype-qualities --strict-vcf -F {3} -C {4} {1} '
+                                 '| bgzip -c > {2}').format(path_current_ref, bam, vcf_temp1_VH_path,
+                                                            frec, minalt, mincoverage,
+                                                            os.path.basename(path_current_ref).replace('.fa', ''),
+                                                            length_VH)
 
+    CMD_consensusVH = ('bgzip -c {3} > {1}; tabix -f -p vcf {1}; bcftools '
+                       'consensus -f {0} {1} -o {2}').format(path_current_ref,
+                                                             vcf_temp_VH_path,
+                                                             fasta_path_freebayes.replace('-fb.fa','-VH-fb.fa'),
+                                                             vcf_temp_VH_path.replace(".vcf.gz",".vcf"))
                                                                        
 
-    fcmd.write(CMD_consensus_freebayes + '\n')
-    fcmd.write(CMD_consensus_freebayesVH + '\n')
+    fcmd.write(CMD_freebayes + '\n')
+    fcmd.write(CMD_freebayesVH + '\n')
+    fcmd2.write(CMD_consensus + '\n')
+    fcmd2.write(CMD_consensusVH + '\n')
 
     return vcf_temp_fb_path, vcf_temp_VH_path
 
@@ -1265,8 +1274,8 @@ def consensus_sequenceV(ref, ref_dict, out, bam_path, vcf_folder, refV, sample, 
     return fasta_path_freebayes
 
 
-def consensus_sequence_complete(ref, ref2, out, folder_references, bam, sample_name,
-                                fcmd, out_vcfs, len_vh):
+def consensus_sequence_complete(ref, ref2, out, folder_references, bam, sample_name, fcmd,
+                                fcmd2, out_vcfs, len_vh):
 
     """"""
     # Reference extraction
@@ -1278,7 +1287,7 @@ def consensus_sequence_complete(ref, ref2, out, folder_references, bam, sample_n
     fasta_path_freebayes = os.path.join(out, fasta_consensus_name_freebayes)
 
     # Consensus sequence
-    vcf_path, VHvcf_path = bcftools_consensus_complete(fcmd, bam,
+    vcf_path, VHvcf_path = bcftools_consensus_complete(fcmd, fcmd2, bam,
                                                        fasta_path_freebayes,
                                                        ref_path, out_vcfs,
                                                        len_vh)
@@ -1944,9 +1953,11 @@ def prepare_complete_consensus(tag, list_bams, out_folder, folder_vcfs,
     if overwrite:
         log.debug('Starting complete rearrangement consensus sequence. '
                   'Out folder is %s', out_folder)
-    
-        path_CMD_consensus, path_LOG_consensus = create_CMD('complete_consensus', out_folder)
-        fcmd = open_file(path_CMD_consensus, mode='write')
+        path_CMD_freebayes, path_LOG_freebayes = create_CMD('freebayes_complete_VH', out_folder)
+        path_CMD_consensus, path_LOG_consensus = create_CMD('consensus_complete_VH', out_folder)
+        
+        fcmd = open_file(path_CMD_freebayes, mode='write')
+        fcmd2 = open_file(path_CMD_consensus, mode='write')
 
         for bam in list_bams:
             ## avoid doing the consensus for vgene BAM files
@@ -1959,7 +1970,7 @@ def prepare_complete_consensus(tag, list_bams, out_folder, folder_vcfs,
                 (consensus_path_fb, consensus_path_VHfb,
                  vcf_path, vcf_pathVH) = consensus_sequence_complete(current_ref, complete_ref, out_folder, 
                                                                      folder_rearrangement_references, bam, 
-                                                                     sample_name, fcmd, folder_vcfs, len_vh)
+                                                                     sample_name, fcmd, fcmd2, folder_vcfs, len_vh)
 
                 # add consensus sequences paths to a list
                 consensus_sequences.append(consensus_path_fb)
@@ -1968,6 +1979,18 @@ def prepare_complete_consensus(tag, list_bams, out_folder, folder_vcfs,
                 vcfsVH.append(vcf_pathVH)
 
         fcmd.close()
+        log.info('Executing %s; performing variant calling for each '
+                 'sample and probable allele', path_CMD_freebayes)
+        
+        ## parallel VCF tmp files prior to filtering
+        parallel(path_CMD_freebayes, proc, path_LOG_freebayes)
+        parallel_resume(path_CMD_freebayes, proc, path_LOG_freebayes)
+        
+        ## VCF parsing and strand bias filter
+        vcfsp = [e.replace('.vcf.gz', '-nofilter.vcf.gz') for e in vcfs]
+        vcfspVH = [e.replace('.vcf.gz', '-nofilter.vcf.gz') for e in vcfsVH]
+        vcf_parsing(results_folder, folder_vcfs, vcfsp, 'variants')
+        vcf_parsing(results_folder, folder_vcfs, vcfspVH, 'variantsVH')
 
         log.info('Executing %s; generating complete consensus sequences for each '
                  'sample and probable allele', path_CMD_consensus)
@@ -1975,6 +1998,9 @@ def prepare_complete_consensus(tag, list_bams, out_folder, folder_vcfs,
         ## consensus sequence
         parallel(path_CMD_consensus, proc, path_LOG_consensus)
         parallel_resume(path_CMD_consensus, proc, path_LOG_consensus)
+    
+        ## remove unfiltered VCF files
+        execute('rm {}/*nofilter*.vcf.gz'.format(folder_vcfs))
         
     else:
         log.warning('There are already consensus sequences files in %s. '
@@ -1985,9 +2011,9 @@ def prepare_complete_consensus(tag, list_bams, out_folder, folder_vcfs,
         vcfs1 = glob.glob(str(folder_vcfs) + (tag + '/*' + tag + '*.vcf.gz'))
         vcfsVH = glob.glob(str(folder_vcfs) + (tag + '/*' + tag + '*VH-fb.vcf.gz'))
         vcfs = [e for e in vcfs1 if not e in vcfsVH]
-    
+        path_CMD_consensus, path_LOG_consensus = (False, False)
         
-    return consensus_sequences, consensus_sequencesVH, vcfs, vcfsVH
+    return consensus_sequences, consensus_sequencesVH, vcfs, vcfsVH, path_CMD_consensus, path_LOG_consensus
     
 
 def prepare_consensus_sequence_annotation(dictionary, g, list_consensus):
@@ -3024,12 +3050,15 @@ def main():
         
         # include step for vcf parsing for indels
         (consensus_complete_list, consensus_complete_listVH,
-         vcfs_complete_list, vcfs_complete_listVH) = prepare_complete_consensus('', list_spec_bams, consensus_complete,
-                                                                                folder_completevcfs,
-                                                                                rearrangement_refs,
-                                                                                ref_dict, results_folder)
-        
-        vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_list, 'variants')
+         vcfs_complete_list, vcfs_complete_listVH, CMDmaldito, LOGmaldito) = prepare_complete_consensus('', list_spec_bams,
+                                                                                                        consensus_complete,
+                                                                                                        folder_completevcfs,
+                                                                                                        rearrangement_refs,
+                                                                                                        ref_dict, results_folder)
+        ## it does not work inside the previous function, so have to execute it here
+        if CMDmaldito:
+            parallel_resume(CMDmaldito, proc, LOGmaldito)
+        #vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_list, 'variants')
         
         #consensus_complete_list_noFR3, vcfs_complete_list_noFR3 = prepare_complete_consensus('-noFR3', list_spec_noFR3_bams,
         #                                                                          consensus_complete,
