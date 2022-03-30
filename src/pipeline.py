@@ -552,7 +552,8 @@ def bcftools_consensus(fcmd, fasta_path, vcf, refV, current_ref, bam_path, sampl
     fcmd.write(CMD_consensus + '\n')
 
 
-def bcftools_consensus_complete(fcmd, bam, fasta_path_freebayes, path_current_ref, out, length_VH):
+def bcftools_consensus_complete(fcmd, bam, fasta_path_freebayes,
+                                path_current_ref, out, length_VH):
 
     """"""
     vcf_temp_fb = os.path.basename(bam).replace('-sorted.bam', '-fb.vcf.gz')
@@ -565,13 +566,14 @@ def bcftools_consensus_complete(fcmd, bam, fasta_path_freebayes, path_current_re
                                                                       bam, vcf_temp_fb_path,
                                                                       fasta_path_freebayes,
                                                                       frec, minalt, mincoverage)
-
+    
     vcf_temp_VH_path = vcf_temp_fb_path.replace('-fb.vcf.gz','-VH-fb.vcf.gz')
     CMD_consensus_freebayesVH = ('freebayes -f {0} -r {7}:0-{8} -m 0 --ploidy 1 --min-coverage {6}'
                                  ' --genotype-qualities --strict-vcf -F {4} -C {5} {1} '
                                  '| bgzip -c > {2}; tabix -f -p vcf {2}; bcftools '
                                  'consensus -f {0} {2} -o {3}').format(path_current_ref, bam,
                                                                        vcf_temp_VH_path,
+                                                                       fasta_path_freebayes.replace('-fb.fa','-VH-fb.fa'),
                                                                        frec, minalt, mincoverage,
                                                                        os.path.basename(path_current_ref).replace('.fa', ''),
                                                                        length_VH)
