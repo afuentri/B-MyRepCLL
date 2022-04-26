@@ -10,7 +10,7 @@ The first module, src/pipeline.py, annotates VDJ calls and mutational status for
 For installation, just clone the repository.
 
 ### REQUIREMENTS
-bwa 0.7.15 or above
+bwa 0.7.15 or above\n
 bamtools 2.4 or above
 bcftools 1.7 or above
 bedtools 2.26 or above
