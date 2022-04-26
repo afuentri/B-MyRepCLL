@@ -10,17 +10,17 @@ The first module, src/pipeline.py, annotates VDJ calls and mutational status for
 For installation, just clone the repository.
 
 ### REQUIREMENTS
-bwa 0.7.15 or above\n
-bamtools 2.4 or above
-bcftools 1.7 or above
-bedtools 2.26 or above
-bbduk(bbtools), repair(bbtools) BBMap version 38 or above
-emboss water 6.6.0 or above
-samtools 1.7 or above
-freebayes 1.1.0 or above
-seqtk 1.2 or above
-Python
-R
+bwa 0.7.15 or above  
+bamtools 2.4 or above  
+bcftools 1.7 or above  
+bedtools 2.26 or above  
+bbduk(bbtools), repair(bbtools) BBMap version 38 or above  
+emboss water 6.6.0 or above  
+samtools 1.7 or above  
+freebayes 1.1.0 or above  
+seqtk 1.2 or above  
+Python  
+R  
 
 #### PIP INSTALL REQUIRED PACKAGES
 pip install -r requirements.txt (Python 2), or pip3 install -r requirements.txt (Python 3)
