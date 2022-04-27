@@ -7,7 +7,7 @@ The first module, src/pipeline.py, annotates VDJ calls and mutational status for
 
 ![alt text](pipeline.png)
 
-For installation, just clone the repository.
+For installation, first clone the repository.
 
 ### Requirements
 >bwa 0.7.15 or above  
