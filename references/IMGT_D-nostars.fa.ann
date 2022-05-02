@@ -1,0 +1,89 @@
+1070 44 11
+0 X97051|IGHD1-1-01|Homo_sapiens|F|D-REGION|3371433730|17 nt|1| | | | |17+0=17| | |
+0 17 0
+0 X13972|IGHD1-14-01|Homo_sapiens|ORF|D-REGION|1451814534|17 nt|1| | | | |17+0=17| | |
+17 17 0
+0 X97051|IGHD1-20-01|Homo_sapiens|F|D-REGION|6201562031|17 nt|1| | | | |17+0=17| | |
+34 17 0
+0 X97051|IGHD1-26-01|Homo_sapiens|F|D-REGION|7216972188|20 nt|1| | | | |20+0=20| | |
+51 20 0
+0 X13972|IGHD1-7-01|Homo_sapiens|F|D-REGION|52665282|17 nt|1| | | | |17+0=17| | |
+71 17 0
+0 X55575|IGHD1/OR15-1a-01|Homo_sapiens|ORF|D-REGION|6379|17 nt|1| | | | |17+0=17| | |
+88 17 0
+0 X55576|IGHD1/OR15-1b-01|Homo_sapiens|ORF|D-REGION|6379|17 nt|1| | | | |17+0=17| | |
+105 17 0
+0 J00234|IGHD2-15-01|Homo_sapiens|F|D-REGION|2959|31 nt|1| | || |31+0=31| | |
+122 31 0
+0 J00232|IGHD2-2-01|Homo_sapiens|F|D-REGION|2959|31 nt|1| | || |31+0=31| | |
+153 31 0
+0 X97051|IGHD2-2-02|Homo_sapiens|F|D-REGION|3636736397|31 nt|1| | | | |31+0=31| | |
+184 31 0
+0 M35648|IGHD2-2-03|Homo_sapiens|F|D-REGION|70100|31 nt|1| | | | |31+0=31| | |
+215 31 0
+0 J00235|IGHD2-21-01|Homo_sapiens|F|D-REGION|2956|28 nt|1| | || |28+0=28| | |
+246 28 0
+0 X97051|IGHD2-21-02|Homo_sapiens|F|D-REGION|6464464671|28 nt|1| | | | |28+0=28| | |
+274 28 0
+0 X13972|IGHD2-8-01|Homo_sapiens|F|D-REGION|79497979|31 nt|1| | | | |31+0=31| | |
+302 31 0
+0 J00233|IGHD2-8-02|Homo_sapiens|F|D-REGION|2959|31 nt|1| | | | |31+0=31| | |
+333 31 0
+0 X55577|IGHD2/OR15-2a-01|Homo_sapiens|ORF|D-REGION|6898|31 nt|1| | | | |31+0=31| | |
+364 31 0
+0 X55578|IGHD2/OR15-2b-01|Homo_sapiens|ORF|D-REGION|6898|31 nt|1| | | | |31+0=31| | |
+395 31 0
+0 X13972|IGHD3-10-01|Homo_sapiens|F|D-REGION|1065910689|31 nt|1| | | | |31+0=31| | |
+426 31 0
+0 X93615|IGHD3-10-02|Homo_sapiens|F|D-REGION|3059|30 nt|1| | || |30+1=31| | |
+457 30 0
+0 X93614|IGHD3-16-01|Homo_sapiens|F|D-REGION|3066|37 nt|1| | | | |37+0=37| | |
+487 37 0
+0 X97051|IGHD3-16-02|Homo_sapiens|F|D-REGION|5755257588|37 nt|1| | | | |37+0=37| | |
+524 37 0
+0 X93616|IGHD3-22-01|Homo_sapiens|F|D-REGION|3060|31 nt|1| | | | |31+0=31| | |
+561 31 0
+0 X13972|IGHD3-3-01|Homo_sapiens|F|D-REGION|804834|31 nt|1| | | | |31+0=31| | |
+592 31 0
+0 X93618|IGHD3-3-02|Homo_sapiens|F|D-REGION|3060|31 nt|1| | | | |31+0=31| | |
+623 31 0
+0 X13972|IGHD3-9-01|Homo_sapiens|F|D-REGION|1047510505|31 nt|1| | | | |31+0=31| | |
+654 31 0
+0 X55579|IGHD3/OR15-3a-01|Homo_sapiens|ORF|D-REGION|210240|31 nt|1| | | | |31+0=31| | |
+685 31 0
+0 X55580|IGHD3/OR15-3b-01|Homo_sapiens|ORF|D-REGION|210240|31 nt|1| | | | |31+0=31| | |
+716 31 0
+0 X13972|IGHD4-11-01|Homo_sapiens|ORF|D-REGION|1155011565|16 nt|1| | | | |16+0=16| | |
+747 16 0
+0 X97051|IGHD4-17-01|Homo_sapiens|F|D-REGION|5869958714|16 nt|1| | | | |16+0=16| | |
+763 16 0
+0 X97051|IGHD4-23-01|Homo_sapiens|ORF|D-REGION|6833468352|19 nt|1| | | | |19+0=19| | |
+779 19 0
+0 X13972|IGHD4-4-01|Homo_sapiens|F|D-REGION|19521967|16 nt|1| | | | |16+0=16| | |
+798 16 0
+0 X55581|IGHD4/OR15-4a-01|Homo_sapiens|ORF|D-REGION|83101|19 nt|1| | | | |19+0=19| | |
+814 19 0
+0 X55582|IGHD4/OR15-4b-01|Homo_sapiens|ORF|D-REGION|82100|19 nt|1| | | | |19+0=19| | |
+833 19 0
+0 X13972|IGHD5-12-01|Homo_sapiens|F|D-REGION|1250612528|23 nt|1| | | | |23+0=23| | |
+852 23 0
+0 X97051|IGHD5-18-01|Homo_sapiens|F|D-REGION|5966159680|20 nt|1| | | | |20+0=20| | |
+875 20 0
+0 X97051|IGHD5-24-01|Homo_sapiens|ORF|D-REGION|6930069319|20 nt|1| | | | |20+0=20| | |
+895 20 0
+0 X13972|IGHD5-5-01|Homo_sapiens|F|D-REGION|29132932|20 nt|1| | | | |20+0=20| | |
+915 20 0
+0 X55583|IGHD5/OR15-5a-01|Homo_sapiens|ORF|D-REGION|94116|23 nt|1| | | | |23+0=23| | |
+935 23 0
+0 X55584|IGHD5/OR15-5b-01|Homo_sapiens|ORF|D-REGION|94116|23 nt|1| | | | |23+0=23| | |
+958 23 0
+0 X13972|IGHD6-13-01|Homo_sapiens|F|D-REGION|1401114031|21 nt|1| | | | |21+0=21| | |
+981 21 0
+0 X97051|IGHD6-19-01|Homo_sapiens|F|D-REGION|6150361523|21 nt|1| | | | |21+0=21| | |
+1002 21 0
+0 X97051|IGHD6-25-01|Homo_sapiens|F|D-REGION|7166671683|18 nt|1| | | | |18+0=18| | |
+1023 18 0
+0 X13972|IGHD6-6-01|Homo_sapiens|F|D-REGION|47624779|18 nt|1| | | | |18+0=18| | |
+1041 18 0
+0 J00256|IGHD7-27-01|Homo_sapiens|F|D-REGION|621631|11 nt|1| | | | |11+0=11| | |
+1059 11 0
