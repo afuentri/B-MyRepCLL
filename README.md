@@ -10,7 +10,9 @@ The first module, src/pipeline.py, annotates VDJ calls and mutational status for
 For installation, first clone the repository.
 
 You can install all the dependencies directly using conda:
+```console
 conda env create -f environment.yml
+```
 
 if not, install the following requirements manually:
 ### Requirements
