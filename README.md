@@ -9,6 +9,10 @@ The first module, src/pipeline.py, annotates VDJ calls and mutational status for
 
 For installation, first clone the repository.
 
+You can install all the dependencies directly using conda:
+conda env create -f environment.yml
+
+if not, install the following requirements manually:
 ### Requirements
 >bwa 0.7.15 or above  
 >bamtools 2.4 or above  
