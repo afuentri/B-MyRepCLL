@@ -2802,7 +2802,7 @@ def main():
     alignment_folderV = os.path.join(out_folder, 'bamsV')
     create_dir(alignment_folderV)
     bam_listV = prepare_alignment(alignment_folderV, trimmed_folder, pairs_trimming, refV)
-        
+    
     ## J bams
     alignment_folderJ = os.path.join(out_folder, 'bamsJ')
     create_dir(alignment_folderJ)
