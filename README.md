@@ -30,7 +30,10 @@ if not, install the following requirements manually:
 
 #### PIP Install Requirements
 ```console
-pip install -r requirements.txt (Python 2), or pip3 install -r requirements.txt (Python 3)
+## Python 2
+pip install -r requirements.txt 
+## or Python 3
+pip3 install -r requirements.txt
 ```
 
 #### Recommended arguments (default workflow validated with CLL data)
