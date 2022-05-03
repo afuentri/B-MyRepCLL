@@ -2,7 +2,7 @@
 # Afuentri                                  #
 # Unidad de Genomica y Diagnostico Genetico #
 # INCLIVA                                   #
-# 2018-05-21                                #
+# init date: 2018/05/21                     #
 #############################################
 
 # Import modules
@@ -24,18 +24,11 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-# Environment variables
-repo = os.environ['scripts_repo']
-## put references inside the repo
-global IGH_references
-IGH_references = os.environ['IGH_references']
-
-## inner modules
-global path_IGH_scripts
-path_IGH_scripts = os.path.join(repo, 'pIgH/modules')
-path_test = os.path.join(repo, 'pIgH/test')
-
-# imports
+## test mode path
+path_test = os.path.join(os.path.abspath(__file__ + "/../../"), 'test')
+scriptDir = os.path.dirname(os.path.abspath(__file__))
+IGH_references = os.path.join(os.path.abspath(__file__ + "/../../"), 'references')
+# import inner modules
 import fastq_merge
 import consensus2CDR3
 from log_manager import log_setup
@@ -246,7 +239,7 @@ def bbduk_trimming(dic, out, merged_folder, fastqs_folder, pairs,
             elif mode == 'right':
 
                 trimmed_mate = os.path.join(out, dic[fastq2]['trimmed_name'])
-                merged_mate =os.path.join(merged_folder, os.path.basename(merged2_mate))
+                merged_mate = os.path.join(merged_folder, os.path.basename(merged2_mate))
 
             if mode == 'left':
 
@@ -343,37 +336,30 @@ def bwamem_alignmentV(out, trimmed_folder, CMD, pairs, ref):
             # paired end mode
             fastq2 = os.path.basename(p[1])
             fastq2_path = os.path.join(trimmed_folder, fastq2)
-            #CMD_alignment = ("bwa mem -t4 -M -R "
-            #                 "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{5}\\tPU:{0}\" "
-            #                 "{1} {2} {3} | samtools view -b - | samtools sort -o {4} -").format(sample_name, ref,
-            #                                                                                      fastq1_path,
-            #                                                                                      fastq2_path,
-            #                                                                                      bam_path, cdate)
-            
+                        
             ## filter FR3 reads
             CMD_alignment = ("bwa mem -t4 -M -R "
                              "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{5}\\tPU:{0}\" "
-                             "{1} {2} {3} | samtools view -b -o {7}; samtools view -H {7} > {6}; samtools view {7} | awk ' {{ if ($4 >= 200 || $4 <= 50) print }} ' >> {6};"
-                             "samtools view {7} | awk  ' {{ if ($4 < 200 && $4 > 50 && $6 !~ \"S\") print }} ' >> {6}; samtools view -b {6} | samtools sort -o {4} -; rm {6}; rm {7}").format(sample_name, ref,
-                                                                                                 fastq1_path,
-                                                                                                 fastq2_path,                                                                                                                                                                                                  bam_path, cdate,
-                                                                                                 sam, tempbam_path)
+                             "{1} {2} {3} | samtools view -b -o {7}; samtools view -H {7} > {6}; "
+                             "samtools view {7} | awk ' {{ if ($4 >= 200 || $4 <= 50) print }} ' >> {6};"
+                             "samtools view {7} | awk  ' {{ if ($4 < 200 && $4 > 50 && $6 !~ \"S\") print }} ' "
+                             ">> {6}; samtools view -b {6} | samtools sort -o {4} -; rm {6}; rm {7}").format(sample_name, ref,
+                                                                                                             fastq1_path,
+                                                                                                             fastq2_path,
+                                                                                                             bam_path, cdate,
+                                                                                                             sam, tempbam_path)
 
         else:
-            # single end mode
-            #CMD_alignment = ("bwa mem -t4 -M -R "
-            #                 "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{4}\\tPU:{0}\" "
-            #                 "{1} {2} |samtools view -b - | samtools sort -o {3} -").format(sample_name,
-            #                                                                                ref, fastq1_path,
-            #                                                                                bam_path, cdate)
             ## filter FR3 reads
             CMD_alignment = ("bwa mem -t4 -M -R "
                              "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{4}\\tPU:{0}\" "
-                             "{1} {2} | samtools view -b -o {6}; samtools view -H {6} > {5}; samtools view {6} | awk ' {{ if ($4 >= 200 || $4 <= 50) print }} ' >> {5};"
-                             "samtools view {6} | awk  ' {{ if ($4 < 200 && $4 > 50 && $6 !~ \"S\") print }} ' >> {5}; samtools view -b {5} | samtools sort -o {3} -; rm {5}; rm {6}").format(sample_name,
-                                                                                             ref, fastq1_path, 
-                                                                                             bam_path, cdate,
-                                                                                             sam, tempbam_path)
+                             "{1} {2} | samtools view -b -o {6}; samtools view -H {6} > {5}; samtools view {6} "
+                             "| awk ' {{ if ($4 >= 200 || $4 <= 50) print }} ' >> {5};"
+                             "samtools view {6} | awk  ' {{ if ($4 < 200 && $4 > 50 && $6 !~ \"S\") print }} ' "
+                             ">> {5}; samtools view -b {5} | samtools sort -o {3} -; rm {5}; rm {6}").format(sample_name,
+                                                                                                             ref, fastq1_path, 
+                                                                                                             bam_path, cdate,
+                                                                                                             sam, tempbam_path)
 
         fcmd.write(CMD_alignment + '\n')
 
@@ -396,7 +382,7 @@ def bwamem_alignmentJ(out, trimmed_folder, CMD, pairs, ref):
         bam_path = os.path.join(out, sortedbam_name)
 
         if len(p) > 1:
-            # paired end mode                                                                                                                                                                                  
+            # paired end mode                                                                                                                                                         
             fastq2 = os.path.basename(p[1])
             fastq2_path = os.path.join(trimmed_folder, fastq2)
             CMD_alignment = ("bwa mem -t4 -M -R "
@@ -407,7 +393,7 @@ def bwamem_alignmentJ(out, trimmed_folder, CMD, pairs, ref):
                                                                                                  bam_path, cdate)
 
         else:
-            # single end mode                                                                                                                                                                                  
+            # single end mode                                                                                                                                                        
             CMD_alignment = ("bwa mem -t4 -M -R "
                              "\"@RG\\tID:{0}\\tPL:ILLUMINA\\tSM:{0}\\tDS:ref={1}\\tCN:UGDG\\tDT:{4}\\tPU:{0}\" "
                              "{1} {2} | samtools view -b - | samtools sort -o {3} -").format(sample_name,
@@ -433,6 +419,7 @@ def bams_list(out, pairs):
         bams.append(bam_path)
 
     return bams
+
 
 def stat_list(bams, out):
 
@@ -530,7 +517,7 @@ def vcf_parsing(folder_results, vcf_folder, vcf_list, name):
     
     vcf_fof = list2file(vcf_list, 'vcf.fof', vcf_folder)
     out_file = os.path.join(folder_results, filename)
-    script = os.path.join(path_IGH_scripts, 'samt-freeb_parser-onlyvariants.py')
+    script = os.path.join(scriptDir, 'samt-freeb_parser-onlyvariants.py')
     CMD = 'python {} -V {} -v > {}'.format(script, vcf_fof, out_file)
     execute(CMD)
 
@@ -848,8 +835,9 @@ def probable_regions(stats, out, name):
     if overwrite:
         log.debug('Starting probable VH alleles calculation. Out folder is %s', out)
         fname = os.path.join(out, name)
-        script = os.path.join(path_IGH_scripts, 'probable_regions.py')
-        CMD = 'python {} -f {} -v -o {}'.format(script, stats, fname)
+        script = os.path.join(scriptDir, 'probable_regions.py')
+        CMD = 'python {} -f {} -v -o {}'.format(script, stats,
+                                                fname)
         log.info('Computing probable regions for %s', stats)
         execute(CMD)
     else:
@@ -865,7 +853,7 @@ def bam_parsing(fof, out):
     overwrite = do_overwrite(out, '.txt')
     if overwrite:
         log.debug('Starting bam parsing. Out folder is %s', out)
-        script = os.path.join(path_IGH_scripts, 'IGHBamsParser_v2.py')
+        script = os.path.join(scriptDir, 'IGHBamsParser.py')
         if clonal:
             CMD = 'python {} -V {} -v -o {} --clonal'.format(script, fof, out)
             log.info('Computing bam parsing in clonality mode for %s', fof)
@@ -1092,7 +1080,8 @@ def filter_Vregion_basal(regions_listV, bam_listV):
 def filter_Jregion_basal(regions_listJ, bam_listV):
 
     """Filter the list with the represented regions of IGHJ ignoring a basal
- percent of reads from policlonal control"""
+    percent of reads from policlonal control
+    """
     c = {}
     for bam in bam_listV:
         sample_name = os.path.basename(bam).replace('-sorted.bam', '')
@@ -1262,7 +1251,8 @@ def consensus_sequenceV(ref, ref_dict, out, bam_path, vcf_folder, refV, sample, 
     # Consensus sequence
     vcf_fb = os.path.basename(bam_path).replace('-sorted.bam', '-fb.vcf.gz')
     vcf_fb_path = os.path.join(vcf_folder, vcf_fb)
-    bcftools_consensus(fcmd, fasta_path_freebayes, vcf_fb_path,  refV, ref, bam_path, sample)
+    bcftools_consensus(fcmd, fasta_path_freebayes, vcf_fb_path,  refV,
+                       ref, bam_path, sample)
 
     return fasta_path_freebayes
 
@@ -1453,6 +1443,7 @@ def joined_annotation(d_hom, g_hom, path_list):
                 else:
                     d_hom[k]['J_assigned'] = ''
                     d_hom[k]['J_coincidence'] = ''
+                    
                 d_hom[k]['joined'] = [l]
                 regV = k.split('_')[-1]
                 d_hom[k]['IGHV-J'] = regV + '_' + d_hom[k]['J_assigned']
@@ -2095,7 +2086,7 @@ def specific_rearrangement_bwamem(fastq, out, fcmd, ref_dict, out_ref, g):
 def uniq_fastq_script(fastq, fcmd):
 
     """"""
-    script = os.path.join(path_IGH_scripts, 'dedup.py')
+    script = os.path.join(scriptDir, 'dedup.py')
     CMD = 'python3.5 {} {}'.format(script, fastq)
     fcmd.write(CMD + '\n')
     
@@ -2169,20 +2160,16 @@ def specific_rearrangement_mapping(l, out, ref_dict, out_ref, g):
         path_CMD_uniq, path_LOG_uniq = create_CMD('uniq-fastq', out)
         fcmd0 = open_file(path_CMD_uniq, mode='write')
         fcmd = open_file(path_CMD_mapping, mode='write')
-        #fcmd2 = open_file(path_CMD_removeFR3, mode='write')
+        ## iterate over FASTQ files
         for fastq in l:
             
             uniq_fastq_script(fastq, fcmd0)
             bam_name = specific_rearrangement_bwamem(fastq, out, fcmd, ref_dict, out_ref, g)
             list_bams.append(bam_name)
 
-            ## create BAM without FR3
-            #bam_noFR3_name = remove_FR3(bam_name, fcmd2)
-            #list_bams_noFR3.append(bam_noFR3_name)
-
         fcmd0.close()
         fcmd.close()
-        #fcmd2.close()
+        ## execute with parallel
         parallel(path_CMD_uniq, proc, path_LOG_uniq)
         
         if len(list_bams) >= 4:
@@ -2191,21 +2178,15 @@ def specific_rearrangement_mapping(l, out, ref_dict, out_ref, g):
             j = proc
             
         parallel(path_CMD_mapping, j, path_LOG_mapping)
-        #parallel(path_CMD_removeFR3, proc, path_LOG_removeFR3)
         
     else:
         log.warning('There are BAM files inside %s. Use mode overwrite if you '
                     'want to create BAM files in this folder', out)
         lbams = glob.glob(str(out) + '/*-sorted.bam')
-        #list_bams, list_bams_noFR3 = [], []
         list_bams = lbams
-        #for l in lbams:
-        #    if 'noFR3' in l:
-        #        list_bams_noFR3.append(l)
-        #    else:
-        #        list_bams.append(l)
+        
 
-    return list_bams#, list_bams_noFR3
+    return list_bams
 
 
 def sequences_overlap(s1, s2):
@@ -2225,12 +2206,15 @@ def nspscalculation(junction, vseq, jseq, dseq):
 
     """"""
     
-    junction_start, d_start, length_juncd = sequences_overlap(junction, dseq)
+    junction_start, d_start, length_juncd = sequences_overlap(junction,
+                                                              dseq)
     vreg_seq = junction[:sequences_overlap(junction, dseq)[0]]
-    jreg_seq = junction[(sequences_overlap(junction, dseq)[0] + sequences_overlap(junction, dseq)[2]):]
+    jreg_seq = junction[(sequences_overlap(junction, dseq)[0] + sequences_overlap(junction,
+                                                                                  dseq)[2]):]
 
     n = junction[:sequences_overlap(vreg_seq, vseq)[2]]
-    p = junction[:-(sequences_overlap(jreg_seq, jseq)[2])][-(sequences_overlap(jreg_seq, jseq)[0]):]
+    p = junction[:-(sequences_overlap(jreg_seq, jseq)[2])][-(sequences_overlap(jreg_seq,
+                                                                               jseq)[0]):]
 
     return (n, p)
 
@@ -2534,7 +2518,7 @@ def parse_alignment_CDR3_emboss(fasta_CDR3_list, out_folder, emboss_files):
                               ',' + score + '\n')
 
         fresume.close()
-        # Order the sequences per identity and length
+        # Order the sequences by score
         CMD = 'sort -k4 -t"," -nr {} > {}'.format(unsorted, out_emboss)
         execute(CMD)
 
@@ -2625,8 +2609,7 @@ def emboss_annotation(emboss_list, d_hom, g_hom):
         else:
             sample_name = os.path.basename(emboss).split('_')[0]
             IGHV = os.path.basename(emboss).split('_')[1]
-            print('we')
-            print('sample_name', 'IGHV')
+            
         if 'gene' in IGHV:
             for a in g_hom:
                 if sample_name == a.split('_')[0]:
@@ -2636,7 +2619,6 @@ def emboss_annotation(emboss_list, d_hom, g_hom):
             k = sample_name + '_' + IGHV
 
         field = 'IGHD_emboss'
-
         fblast = read_file_simply(emboss)
         
         if fblast != []:
@@ -2717,69 +2699,57 @@ def main():
     """Main script for pipeline intro"""
     # Get arguments
     args = arguments_parser_IGH.parse_args()
-
+    
     ## Define logging
     log_setup(args)
 
     # define global variables
-    global cdate
+    global cdate, proc, owrt, clonal, frec, minalt, basal, mincoverage, TMPDIR
     cdate = time.strftime("%d-%m-%Y_%H-%M-%S")
-    global proc
-    global owrt
-    global clonal
-    global frec
-    global minalt
-    global basal
-    global mincoverage
-    global TMPDIR
+    owrt = args.owrt
+    
+    # unpack args
     out_folder = os.path.abspath(args.dest)
     TMPDIR = out_folder
-    # analysis mode
+    exclud = 'None'
+    ## reference files
+    refV = os.path.join(IGH_references, 'IMGT_V-oneline-NOstars-simple.fa')
+    refD = os.path.join(IGH_references, 'IMGT_D-nostars.fa')
+    refJ = os.path.join(IGH_references, 'IMGT_J-nostars-simple.fa')
+    ## analysis mode
     if args.pipeline:
-        fastqs_folder = os.path.abspath(args.inputf)
-        owrt = args.owrt
-        proc = args.processes
-        # Define folder exclusion from FASTQ seeking
+        fastqs_folder, proc = (os.path.abspath(args.inputf), args.processes)
+        ## Define folder exclusion from FASTQ seeking
         if args.exclude:
             exclud = args.exclude
-        else:
-            exclud = 'None'
-        # basal filter
+    
+        ## basal filter
         if args.basal:
             basal = 3.6
         else:
             basal = 0
-        # clonality analysis?
+        ## clonality analysis?
         if args.clonality:
-            clonal = True
-            basal = 0
+            clonal, basal = (True, 0)
         else:
             clonal = False
 
-        # kind of analysis (Sanger or NGS)
+        ## kind of analysis (Sanger or NGS)
         if args.sanger:
-            frec = '0.2'
-            minalt = '1'
-            mincoverage = '0'
+            frec, minalt, mincoverage = ('0.2', '1', '0')
+            
         else:
-            frec = '0.5'
-            minalt = '2'
-            mincoverage = '50'
+            frec, minalt, mincoverage = ('0.5', '2', '50')
 
     # test option
     if args.test:
-        fastqs_folder = path_test #"/nfs/hpcugdga/IGHS-motivos_20171205/fastq_test"
-        owrt = args.owrt
-        proc = '10'
-        exclud = 'None'
-        basal = 3.6
-        frec = '0.5'
-        minalt = '2'
-        mincoverage = '50'
+        fastqs_folder, proc, basal, frec, minalt, mincoverage = (path_test, '10',
+                                                                 3.6, '0.5',
+                                                                 '2', '50')
         # clonality analysis?
         if args.clonality:
-            clonal = True
-            basal = 0
+            clonal, basal = (True, 0)
+            
         else:
             clonal = False
 
@@ -2831,17 +2801,11 @@ def main():
     ## V bams
     alignment_folderV = os.path.join(out_folder, 'bamsV')
     create_dir(alignment_folderV)
-    refV = os.path.join(IGH_references, 'IMGT_V-oneline-NOstars-simple.fa')
     bam_listV = prepare_alignment(alignment_folderV, trimmed_folder, pairs_trimming, refV)
-    ## D bams
-    alignment_folderD = os.path.join(out_folder, 'bamsD')
-    create_dir(alignment_folderD)
-    refD = os.path.join(IGH_references, 'IMGT_D-nostars.fa')
-    #bam_listD = prepare_alignment(alignment_folderD, trimmed_folder, pairs_trimming, refD)
+    
     ## J bams
     alignment_folderJ = os.path.join(out_folder, 'bamsJ')
     create_dir(alignment_folderJ)
-    refJ = os.path.join(IGH_references, 'IMGT_J-nostars-simple.fa')
     bam_listJ = prepare_alignment(alignment_folderJ, trimmed_folder, pairs_trimming, refJ)
 
     # Alignment statistics with samtools idxstats and probable regions calculation
@@ -3030,31 +2994,19 @@ def main():
                                                                                 folder_completevcfs,
                                                                                 rearrangement_refs,
                                                                                 ref_dict, results_folder)
-        
+        ## parse VCF files into variants.csv
         vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_list, 'variants')
-        
-        #consensus_complete_list_noFR3, vcfs_complete_list_noFR3 = prepare_complete_consensus('-noFR3', list_spec_noFR3_bams,
-        #                                                                          consensus_complete,
-        #                                                                          folder_completevcfs,
-        #                                                                          rearrangement_refs)
-        # only perform vcf parsing with complete sequences
-        #vcf_parsing(results_folder, folder_completevcfs, vcfs_complete_listVH, 'variants')
-    
+          
     ## Consensus sequence and local alignment against the reference alleles using EMBOS water
-    #water_list  mutationalStatus(consensus_complete_list, homology_folder, ref_dict)
     water_list2 = mutationalStatus(consensus_complete_listVH, homology_folder, ref_dict)
     ## Parsing homology data and adding the value to dictionary
     ## We will use water_list to open each alignment file and parse EMBOSS
     ## water output to add the homology result to the final table
-    #d_hom, g_hom = homology_parsing(water_list, d_hom, g_hom, 'homology', 'mutational_status')
-    d_hom, g_hom = homology_parsing(water_list2, d_hom, g_hom, 'homology_noFR3', 'mutational_status_noFR3')
+    d_hom, g_hom = homology_parsing(water_list2, d_hom, g_hom, 'homology', 'mutational_status')
 
     prepare_consensus_sequence_annotation(d_hom, g_hom, consensus_complete_listVH)
     
     # Productivity and CDR3
-    #fasta_IGHD_list, junctiond, d_hom, g_hom = motifs(consensus_complete_list,
-    #                                                  d_hom, g_hom, CDR3_fastas_folder,
-    #                                                  folder_completevcfs)
     if not clonal:
         # get unique reads from bam_specific_rearrangements
         if args.cdr3s:

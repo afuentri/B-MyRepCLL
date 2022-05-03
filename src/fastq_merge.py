@@ -19,7 +19,6 @@ from log_manager import log_setup
 import software_paths
 from dir_management import *
 
-repo = os.environ['scripts_repo']
 # import the module
 import fastq_unifier
 
@@ -73,7 +72,10 @@ def create_mergecheck_cmd(merge, out, cdate):
     fqs = str(' '.join(merge.split(';')))
     wrong_name = str(cdate) + '-wrongmerge.txt'
     wrong_file_path = os.path.join(out, wrong_name)
-    CMD = 'n1=$(zcat {0} | wc -l); n2=$(zcat {1} | wc -l); if [ $n1 -eq $n2 ]; then echo \"Merge was correct for sample {1}\"; else echo \"{1}\" >> {2}; fi'.format(fqs, out_file, wrong_file_path)
+    CMD = ('n1=$(zcat {0} | wc -l); n2=$(zcat {1} | wc -l); if [ $n1 -eq $n2 ]; '
+           'then echo \"Merge was correct for sample {1}\"; else echo \"{1}\" >> {2}; fi').format(fqs,
+                                                                                                  out_file,
+                                                                                                  wrong_file_path)
 
     return CMD
 
@@ -160,7 +162,8 @@ def merge(merge_fof_path, merged_folder, CMD_merge, merge_list, cdate, proc):
         execute(parallel_merge)
 
     else:
-        log.warning('There are already FASTQ files in folder merge %s. Remove them if you want to perform FASTQ merge', merged_folder)
+        log.warning('There are already FASTQ files in folder merge %s. Remove them if you want to perform FASTQ merge',
+                    merged_folder)
 
         
 def merge_checking(merge_list, merged_folder, cdate, proc):
@@ -176,8 +179,8 @@ def merge_checking(merge_list, merged_folder, cdate, proc):
     # execute check_merge_cmd
     LOG_mergecheck = str(cdate) + '-LOG-mergecheck.log'
     LOG_mergecheck_path = os.path.join(merged_folder, LOG_mergecheck)
-    parallel_mergecheck = 'cat {} | parallel --joblog {} -j{}'.format(CMD_mergecheck_path, LOG_mergecheck_path, proc)
-    log.warning('Due to a bug in this script we do not know how to solve yet, please copy the following line in your shell and press enter:\n%s', parallel_mergecheck)
+    parallel_mergecheck = 'cat {} | parallel --joblog {} -j{}'.format(CMD_mergecheck_path,
+                                                                      LOG_mergecheck_path, proc)
     execute(parallel_mergecheck)
 
             
@@ -193,18 +196,22 @@ def whole_merging_process(fastqs_folder, out_folder, proc, cdate, exclud):
     merged_folder = os.path.join(out_folder, 'merged')
     create_dir(merged_folder)
     # Get FASTQ files dictionary
-    fastq_d, extensions, d_samplenames, d_samplenames_reads, merge_list, pairs_raw, pairs_trimmed, trimming_io, trim_dict = fastq_unifier.fastq_dictionary(fastq_list, merged_folder)
+    (fastq_d, extensions, d_samplenames, d_samplenames_reads, merge_list,
+    pairs_raw, pairs_trimmed, trimming_io, trim_dict) = fastq_unifier.fastq_dictionary(fastq_list,
+                                                                                       merged_folder)
     # pairs and trimming txt
     pair_raw_path = create_pairs_file(pairs_raw, out_folder, 'pairs_raw.csv')
     pair_trimmed_path = create_pairs_file(pairs_trimmed, out_folder, 'pairs_trimmed.csv')
     trimming_io_path = create_pairs_file(trimming_io, out_folder, 'trimming_io.csv')
     
     # create merge folder
-    merge_fof_path, CMD_merge = prepare_merge_input(fastq_fof_path, out_folder, cdate, merged_folder)
+    merge_fof_path, CMD_merge = prepare_merge_input(fastq_fof_path, out_folder,
+                                                    cdate, merged_folder)
     
 
     # merge
-    merge(merge_fof_path, merged_folder, CMD_merge, merge_list, cdate, proc)
+    merge(merge_fof_path, merged_folder, CMD_merge, merge_list,
+          cdate, proc)
     
     # merge checking
     merge_checking(merge_list, merged_folder, cdate, proc)

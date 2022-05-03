@@ -1,3 +1,0 @@
-Seq	Host	Starttime	JobRuntime	Send	Receive	Exitval	Signal	Command
-1	:	1571163498.480	     0.290	0	0	0	0	seqtk trimfq /media/scratch/aft_projects_tmp/python3_myenv/test/merged/IGH-MIX3-clonal-control_S58_L001_R1_001.fastq.gz | gzip > /media/scratch/aft_projects_tmp/python3_myenv/test/trimmed/IGH-MIX3-clonal-control_S58_L001_R1_001-trimmed.fastq.gz
-2	:	1571163498.779	     0.315	0	0	0	0	seqtk trimfq /media/scratch/aft_projects_tmp/python3_myenv/test/merged/IGH-MIX3-clonal-control_S58_L001_R2_001.fastq.gz | gzip > /media/scratch/aft_projects_tmp/python3_myenv/test/trimmed/IGH-MIX3-clonal-control_S58_L001_R2_001-trimmed.fastq.gz

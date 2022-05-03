@@ -3,7 +3,11 @@
 import re
 import os
 
-#This script recognizes the fastq format names to use them as the input of a pipeline.# The considerations are that FASTQ names must be inside the universal format of FASTQ# files and that the sample name can not contain "_" in it. In this case FASTQ names h#ave to be changes (for example replace "_" by "-", though "_" is already the universa#l separator for the rest of the fields.
+# This script recognizes the fastq format names to use them as the input of a pipeline.
+# The considerations are that FASTQ names must be inside the universal format of FASTQ
+# files and that the sample name can not contain "_" in it. In this case FASTQ names
+# have to be changed (for example replace "_" by "-", though "_" is already the universal
+# separator for the rest of the fields.
 
 
 def merge(sample_name_read_dict, trim_dict, merged_folder, trimming, pairs_raw, d, pairs_trimmed):
@@ -63,7 +67,10 @@ def fastq_dictionary(n, merged_folder):
         fastq = os.path.basename(fastq_path)
 
         # Define the empty dictionary
-        d[fastq_path] = { 'path' : '', 'compressed' : '', 'name_without_extension' : '', 'extension': '', 'sample_name' : '', 'pair' : '', 'mate' : '', 'read' : '', 'lane' : '', 'barcode' : '', 'bam_name' : ''}
+        d[fastq_path] = { 'path' : '', 'compressed' : '', 'name_without_extension' : '', 'extension': '',
+                          'sample_name' : '', 'pair' : '', 'mate' : '', 'read' : '', 'lane' : '', 'barcode' : '',
+                          'bam_name' : ''}
+        
         # Extract the path of the file
         d[fastq_path]['path'] = os.path.dirname(fastq_path)
 
@@ -155,6 +162,8 @@ def fastq_dictionary(n, merged_folder):
                 barcode = element
                 d[fastq_path]['barcode'] = barcode
 
-    merged, pairs_raw, pairs_trimmed, trimming, trim_dict = merge(sample_name_read_dict, trim_dict, merged_folder, trimming, pairs_raw, d, pairs_trimmed)
+    merged, pairs_raw, pairs_trimmed, trimming, trim_dict = merge(sample_name_read_dict, trim_dict,
+                                                                  merged_folder, trimming, pairs_raw, d, pairs_trimmed)
                                                             
-    return d, extensions, sample_name_dict, sample_name_read_dict, merged, pairs_raw, set(pairs_trimmed), trimming, trim_dict
+    return (d, extensions, sample_name_dict, sample_name_read_dict, merged,
+            pairs_raw, set(pairs_trimmed), trimming, trim_dict)

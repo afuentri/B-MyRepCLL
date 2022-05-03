@@ -1,3 +1,0 @@
-Found possible ORF in position 0:
-SISSSNWWSWIRQPPGKGLEWIGEINHSGSTNYNPSLKSRVTISVDTSKKQLSLKLSSVNAADTAVYYCARVITRASPGTDGRYGMDVWGQGTTVTVSS
-Found Cys for CDR3 start in position 68 and motive WGXG for CDR3 end in position 88.Cys found in positions [] and WGXG found in positions []
