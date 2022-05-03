@@ -518,7 +518,7 @@ def vcf_parsing(folder_results, vcf_folder, vcf_list, name):
     vcf_fof = list2file(vcf_list, 'vcf.fof', vcf_folder)
     out_file = os.path.join(folder_results, filename)
     script = os.path.join(scriptDir, 'samt-freeb_parser-onlyvariants.py')
-    CMD = 'python {} -V {} -v > {}'.format(script, vcf_fof, out_file)
+    CMD = 'python3 {} -V {} -v > {}'.format(script, vcf_fof, out_file)
     execute(CMD)
 
 
@@ -836,8 +836,8 @@ def probable_regions(stats, out, name):
         log.debug('Starting probable VH alleles calculation. Out folder is %s', out)
         fname = os.path.join(out, name)
         script = os.path.join(scriptDir, 'probable_regions.py')
-        CMD = 'python {} -f {} -v -o {}'.format(script, stats,
-                                                fname)
+        CMD = 'python3 {} -f {} -v -o {}'.format(script, stats,
+                                                 fname)
         log.info('Computing probable regions for %s', stats)
         execute(CMD)
     else:
@@ -855,10 +855,10 @@ def bam_parsing(fof, out):
         log.debug('Starting bam parsing. Out folder is %s', out)
         script = os.path.join(scriptDir, 'IGHBamsParser.py')
         if clonal:
-            CMD = 'python {} -V {} -v -o {} --clonal'.format(script, fof, out)
+            CMD = 'python3 {} -V {} -v -o {} --clonal'.format(script, fof, out)
             log.info('Computing bam parsing in clonality mode for %s', fof)
         else:
-            CMD = 'python {} -V {} -v -o {}'.format(script, fof, out)
+            CMD = 'python3 {} -V {} -v -o {}'.format(script, fof, out)
             log.info('Computing bam parsing for %s', fof)
         execute(CMD)
 
@@ -2087,7 +2087,7 @@ def uniq_fastq_script(fastq, fcmd):
 
     """"""
     script = os.path.join(scriptDir, 'dedup.py')
-    CMD = 'python3.5 {} {}'.format(script, fastq)
+    CMD = 'python3 {} {}'.format(script, fastq)
     fcmd.write(CMD + '\n')
     
 
