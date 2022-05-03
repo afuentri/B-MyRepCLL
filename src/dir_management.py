@@ -14,8 +14,6 @@ import subprocess
 import re
 import sys
 
-# GLOBAL VARIABLES
-hist = os.environ["HISTORICO"]
 # logging
 
 def check_directory(dire):
