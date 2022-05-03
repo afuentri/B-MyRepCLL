@@ -9,8 +9,6 @@ import string
 import re
 import os
 
-repo = os.environ['scripts_repo']
-
 ## fasta sequence
 fasta = sys.argv[1]
 
