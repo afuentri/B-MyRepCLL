@@ -195,7 +195,7 @@ def get_CDR3(seq, mincys=80):
     cys = seek_sequence('TG[TC]', seq)
     ## we have to check that there are sequences with cys
     ## greater than mincys
-    ## we are removing all morif starting positions below 10
+    ## we are removing all motif starting positions below 10
     list_cys = [ e for e in cys if e > mincys ]
     min_cys_big = [ e for e in list_cys if e > 10]
     min_motif = [ e for e in motif if e > 10 ]
