@@ -2,7 +2,7 @@ chord==1.0.1
 fpdf==1.7.2
 glob2==0.7
 matplotlib==3.0.3
-notebook==6.0.3
+notebook==6.4.10
 numpy==1.18.2
 openpyxl==2.6.4
 pandas==0.24.2
