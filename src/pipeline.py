@@ -1303,7 +1303,7 @@ def homology(ref_dict, consensus_path, fcmd_homology, sample_name, homology_fold
     if not os.path.isfile(reference_path):
         make_reference(reference_path, short_ref, current_ref, mode='write')
 
-    cmd_emboss = ('emboss_water -asequence {} -bsequence {} -gapopen 10.0 '
+    cmd_emboss = ('water -asequence {} -bsequence {} -gapopen 10.0 '
                   '-gapextend 0.5 -outfile {} '
                   '-aformat pair').format(reference_path, consensus_path, out_path)
     fcmd_homology.write(cmd_emboss + '\n')
@@ -1508,7 +1508,7 @@ def local_alignmentJ(fastq, out, refJ, sample_name):
             refseq.write(ref[read] + '\n' + ref[read + 1] + '\n')
             refseq.close()
 
-            CMD = ('emboss_water -asequence {} -bsequence {} -gapopen 10.0 '
+            CMD = ('water -asequence {} -bsequence {} -gapopen 10.0 '
                    '-gapextend 0.5 -outfile {} '
                    '-aformat pair').format(out_ref, fasta, out_path)
             execute(CMD)
@@ -2488,7 +2488,7 @@ def CDR3_emboss(out_emboss, fastq, fcmd, refD, emboss_files):
         else:
             emboss_files.append(out_file)
 
-        CMD = ('emboss_water -asequence {} -bsequence <(echo -e ">{}\\n{}") -gapopen 10.0 '
+        CMD = ('water -asequence {} -bsequence <(echo -e ">{}\\n{}") -gapopen 10.0 '
                '-gapextend 0.5 -outfile {} -aformat pair').format(fastq, nameD, allelesD[k], out_file)
 
         fcmd.write(CMD + '\n')

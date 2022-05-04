@@ -76,7 +76,7 @@ def compare_consensus(f1, f2):
     n2 = [i for i in glob.glob(f2) if 'FR3' not in i]
     if n1 != [] and n2 != []:
         out_path = 'tmp.fa'
-        CMD = ('emboss_water -asequence {} -bsequence {} -gapopen 10.0 '
+        CMD = ('water -asequence {} -bsequence {} -gapopen 10.0 '
                '-gapextend 0.5 -outfile {} '
                '-aformat pair').format(n1[0], n2[0], out_path)
         execute(CMD)

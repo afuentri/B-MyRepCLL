@@ -78,7 +78,7 @@ def compare_consensus(f1, f2):
     if (n1 != []) and (n2 != []):
         
         out_path = 'temp.fa'
-        CMD = ('emboss_water -asequence {} -bsequence {} -gapopen 10.0 '
+        CMD = ('water -asequence {} -bsequence {} -gapopen 10.0 '
                '-gapextend 0.5 -outfile {} '
                '-aformat pair').format(n1[0], n2[0], out_path)
         execute(CMD)
