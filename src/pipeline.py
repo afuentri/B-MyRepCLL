@@ -105,8 +105,8 @@ def write_header(fhand):
 def dhom_write(s, v, k, d_hom):
 
     """Write hom output dict fields to tabular"""
-    l = ('{},{},{},{},{},{},{},{},{},{},'
-         '{},{},{},{},{},{},{},{},{},'
+    l = ('{},{},{},{},{},{},{},{},'
+         '{},{},{},{},{},{},{},{},'
          '{},{},{},{},{},{},{},{},{}').format(s, v, d_hom[k]['nreads'], d_hom[k]['nreads_leader'],
                             d_hom[k]['nreads_fr1'], d_hom[k]['nreads_fr2'], d_hom[k]['nreads_fr3'],
                             d_hom[k]['length'], d_hom[k]['homology'],
