@@ -95,9 +95,9 @@ def write_header(fhand):
 
     """"""
     fhand.write('sample_name,Vregion,reads_mapped,reads_mapped_leader,reads_mapped_fr1,'
-                'reads_mapped_fr2,reads_mapped_fr3,region_length,homology-IGHV_noFR3,mutational_status_noFR3,'
+                'reads_mapped_fr2,reads_mapped_fr3,region_length,homology-IGHV,mutational_status,'
                                 'joined,Jregion,J_assigned,J_coincidence,'
-                                'IGHV-J,consensus_length,CDR3,CDR3_length,IGHD,IGHD_emboss,'
+                                'IGHV-J,consensus_length,IGHD_emboss,'
                                 'insertions,deletions,ORF disruption,'
                 'majorproductive_seq,nreads_majorproductive_seq,major_CDR3,major_IGHD,major_prod\n')
 
@@ -109,13 +109,12 @@ def dhom_write(s, v, k, d_hom):
          '{},{},{},{},{},{},{},{},{},'
          '{},{},{},{},{},{},{},{},{}').format(s, v, d_hom[k]['nreads'], d_hom[k]['nreads_leader'],
                             d_hom[k]['nreads_fr1'], d_hom[k]['nreads_fr2'], d_hom[k]['nreads_fr3'],
-                            d_hom[k]['length'], d_hom[k]['homology_noFR3'],
-                            d_hom[k]['mutational_status_noFR3'],';'.join(d_hom[k]['joined']),
+                            d_hom[k]['length'], d_hom[k]['homology'],
+                            d_hom[k]['mutational_status'],';'.join(d_hom[k]['joined']),
                             ';'.join(d_hom[k]['Jregion']), d_hom[k]['J_assigned'],
                             d_hom[k]['J_coincidence'],
                             d_hom[k]['IGHV-J'], str(d_hom[k]['consensus_length']),
-                            d_hom[k]['CDR3'],
-                            d_hom[k]['CDR3_length'], d_hom[k]['IGHD'],d_hom[k]['IGHD_emboss'],
+                            d_hom[k]['IGHD_emboss'],
                             d_hom[k]['insertions'],
                             d_hom[k]['deletions'], d_hom[k]['disruption'], d_hom[k]['new_seq'], d_hom[k]['nreads_new_seq'],
                             d_hom[k]['new_CDR3'], d_hom[k]['new_IGHD'], d_hom[k]['prod'])
