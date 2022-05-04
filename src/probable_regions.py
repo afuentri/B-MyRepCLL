@@ -77,19 +77,19 @@ def extract_fragmentreads(ref, bam):
     for line in out:
         
         if line != '':
-            line = line.decode("utf-8").strip()
+            line = line.strip()
             
-            seqid = line.decode("utf-8").split()[0]
-            pos = int(line.decode("utf-8").split()[3])
+            seqid = line.split()[0]
+            pos = int(line.split()[3])
             
             if pos < 120 and pos >= 40:
-                dfrag['FR1'].append(seqid.decode("utf-8"))
+                dfrag['FR1'].append(seqid)
             elif pos < 200 and pos >= 120:
-                dfrag['FR2'].append(seqid.decode("utf-8"))
+                dfrag['FR2'].append(seqid)
             elif pos < 280 and pos >= 200:
-                dfrag['FR3'].append(seqid.decode("utf-8"))
+                dfrag['FR3'].append(seqid)
             elif pos < 40 and pos >= 0:
-                dfrag['leader'].append(seqid.decode("utf-8"))
+                dfrag['leader'].append(seqid)
         
     return dfrag
 
