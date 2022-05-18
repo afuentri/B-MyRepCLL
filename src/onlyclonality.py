@@ -4,6 +4,7 @@ import shutil
 import matplotlib
 import pandas as pd
 import xlsxwriter
+import openpyxl
 import glob
 import numpy as np
 matplotlib.use('Agg')
@@ -156,7 +157,7 @@ def cdr3chord(df):
        
     names = [n.replace('IGH-','') for n in asmatrix_small.columns.tolist()]
     #names = [r for r in range(0, len(asmatrix_small.columns.tolist()))]
-    Chord(asmatrix_small.as_matrix().tolist(), names,
+    Chord(asmatrix_small.values.tolist(), names,
           font_size_large="7px").to_html("chord.html")
     
         
@@ -297,7 +298,7 @@ def homology_resume(hom, rescued, outtable, outcoverage, min_cov,
 	                        'Vgene_x', 'reads_mapped_y_x', 'percent_reads_mapped_Vgene',
 	                        'percent_clonal_Vgene','homology-IGHV_noFR3',
 	                        'mutational_status_noFR3', 'J_assigned', 'IGHV-J',
-	                        'consensus_length', CDR3, 'CDR3_length',  'IGHD', 'IGHD_emboss',
+	                        'consensus_length', CDR3, 'IGHD_emboss',
 	                        'insertions','deletions','ORF disruption', 'majorproductive_seq',
                                 'nreads_majorproductive_seq']]
 
@@ -307,7 +308,7 @@ def homology_resume(hom, rescued, outtable, outcoverage, min_cov,
 	                    'reads_mapped_gene', 'percent_reads_mapped_Vgene', 'percent_clonal_Vgene',
                             'homology-IGHV_noFR3', 'mutational_status_noFR3',
 	                    'J_assigned', 'IGHV-J', 'consensus_length', 'CDR3',
-	                    'CDR3_length', 'IGHD','IGHD_emboss', 'insertions','deletions',
+	                    'IGHD_emboss', 'insertions','deletions',
 	                    'ORF disruption','majorunique_productiveSeq','nreads_majorunique_productiveSeq']
 	
     ## select the max entry for each V gene
@@ -499,7 +500,7 @@ def main():
 
     ## HOMOLOGY RESUMEN TABLE ##
     ### total reads annotation
-    re = pd.read_excel(reads)
+    re = pd.read_excel(reads, engine='openpyxl')
     
     re['sample_name'] = re['Muestra'].str.split('_').str[0]
     re['nreads'] = re['numero lecturas trim']*2

@@ -26,10 +26,7 @@ cdate = time.strftime("%Y%m%d")
 nfastqs = len(glob.glob(str(folder_fastqs) +
                         '/*fastq.gz'))
 
-
-print ('Detected {} FASTQ files for {}'
-       ' samples. Running on {} processes.').format(nfastqs, nfastqs/2, '20')
-
+phrase = 'Detected {} FASTQ files for {} samples. Running on {} processes.'.format(nfastqs, nfastqs/2, '20')
 CMD2 = ('time python {3}/B-MyRepCLL/src/pipeline.py '
         '--pipeline -f {0} '
         '-o {1}_{2} -v -p15 --basal '

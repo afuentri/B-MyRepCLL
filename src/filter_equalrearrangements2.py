@@ -122,8 +122,8 @@ with open(hom, 'r') as fhand:
                         'region_length,homology-IGHV_noFR3,'
                         'mutational_status_noFR3,joined,Jregion,'
                         'J_assigned,J_coincidence,IGHV-J,'
-                        'consensus_length,CDR3,CDR3_length,IGHD,'
-                        'IGHD_emboss,insertions,deletions,ORF disruption'
+                        'consensus_length,IGHD_emboss,'
+                        'insertions,deletions,ORF disruption'
                         ',majorproductive_seq'
                         ',nreads_majorproductive_seq,major_CDR3,'
                         'major_IGHD,major_prod\n')
