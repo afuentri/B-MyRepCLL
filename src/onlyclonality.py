@@ -260,7 +260,6 @@ def homology_resume(hom, rescued, outtable, outcoverage, min_cov,
     del hom_to_save['Vgene_y']
     del hom_to_save['Vgroup']
     
-    hom_to_save['percent_clonal_Vgene'] = 0
     ## calculate percentages
     samples = hom_to_save['sample_name'].unique().tolist()
     
@@ -287,16 +286,13 @@ def homology_resume(hom, rescued, outtable, outcoverage, min_cov,
                         ms = float(n1[n1['nrearrangement'] == rear[f+1]]['reads_mapped_y_x'].to_string().split()[1])
                     else:
                         ms = 0
-        
-            hom_to_save.at[t, 'percent_clonal_Vgene'] = (mr - ms)/float(n1['count_reads_mapped'].unique().tolist()[0]) * 100
-            hom_to_save['percent_clonal_Vgene'] = hom_to_save['percent_clonal_Vgene'].astype(float)
-            
+                  
     ## define columns
     hom_to_savef = hom_to_save[['sample_name', 'Vregion', 'combined_alleles', 'reads_mapped', 'reads_mapped_leader',
 	                        'reads_mapped_fr1', 'reads_mapped_fr2', 'reads_mapped_fr3',
 	                        'region_length', 'nreads', 'count_reads_mapped', 'nrearrangement',
 	                        'Vgene_x', 'reads_mapped_y_x', 'percent_reads_mapped_Vgene',
-	                        'percent_clonal_Vgene','homology-IGHV_noFR3',
+	                        'homology-IGHV_noFR3',
 	                        'mutational_status_noFR3', 'J_assigned', 'IGHV-J',
 	                        'consensus_length', CDR3, 'IGHD_emboss',
 	                        'insertions','deletions','ORF disruption', 'majorproductive_seq',
@@ -305,7 +301,7 @@ def homology_resume(hom, rescued, outtable, outcoverage, min_cov,
     hom_to_savef.columns = ['sample_name', 'Vallele', 'combined_alleles', 'reads_mapped_allele', 'reads_mapped_leader',
 	                    'reads_mapped_fr1', 'reads_mapped_fr2', 'reads_mapped_fr3',
 	                    'ref_length', 'reads_trimming', 'reads_mappedV', 'nrearrangement', 'Vgene',
-	                    'reads_mapped_gene', 'percent_reads_mapped_Vgene', 'percent_clonal_Vgene',
+	                    'reads_mapped_gene', 'percent_reads_mapped_Vgene',
                             'homology-IGHV_noFR3', 'mutational_status_noFR3',
 	                    'J_assigned', 'IGHV-J', 'consensus_length', 'CDR3',
 	                    'IGHD_emboss', 'insertions','deletions',
@@ -384,7 +380,7 @@ def homology_resume(hom, rescued, outtable, outcoverage, min_cov,
     hom_to_saveff.style.apply(lambda x: ['background-color: #00ff8c' if x.name in l else '' for i in x],
                              axis=1)
 
-    return hom_to_saveff
+    return hom_to_saveff, hom_to_save
 
 
 def filterFR3(filtered, rest, CDR3='major_CDR3'):
@@ -437,7 +433,7 @@ def filterFR3(filtered, rest, CDR3='major_CDR3'):
     return filtered, rescued
                 
 
-def usage_plots(hom_to_savef2, homt, folder_plots, naleles, tag=''):
+def usage_plots(hom_to_savef2, hom_to_save, folder_plots, naleles, tag=''):
 
     """"""
 
@@ -446,20 +442,30 @@ def usage_plots(hom_to_savef2, homt, folder_plots, naleles, tag=''):
     # plot general allele and IGHV gene counts
     # size a4 paper
     plt.figure(figsize=(naleles/1.3, naleles/3))
-    sns.set(font_scale=naleles/40, style='white')
+    sns.set(font_scale=naleles/20, style='white')
 
     ## allele
-    az = sns.barplot(x='Vregion', y='reads_mapped',
-                     data=homt.sort_values('Vregion'))
+    az = sns.barplot(x='Vallele', y='reads_mapped_allele',
+                     data=hom_to_savef2.sort_values('Vallele'))
     az.set_xticklabels(az.get_xticklabels(), rotation=90)
 
     plt.tight_layout()
     name = os.path.join(folder_plots, 'counts-Valleles_{}{}.png'.format(tag, str(run)))
+    plt.ylabel('n. mapped reads')
     plt.savefig(name)
     plt.gcf().clear()
         
     ## percent
+    az = sns.barplot(x='Vregion', y='percent_reads_mapped_Vallele',
+                     data=hom_to_save.sort_values('Vregion'))
+    az.set_xticklabels(az.get_xticklabels(), rotation=90)
 
+    plt.tight_layout()
+    name = os.path.join(folder_plots, 'percent-Valleles_{}{}.png'.format(tag, str(run)))
+    plt.ylabel('% mapped reads')
+    plt.savefig(name)
+    plt.gcf().clear()
+                    
     # size a4 paper
     plt.figure(figsize=(50,30))
     sns.set(font_scale=3, style='white')
@@ -475,7 +481,7 @@ def usage_plots(hom_to_savef2, homt, folder_plots, naleles, tag=''):
     with sns.color_palette("Paired", 15):
         az = pivot_df.plot.bar(stacked=True, figsize=(30,15))
     az.set_xticklabels(az.get_xticklabels(), rotation=90)
-
+    plt.ylabel('n. mapped reads')       
     plt.tight_layout()
     plt.savefig(plotname)
     plt.gcf().clear()
@@ -490,11 +496,10 @@ def usage_plots(hom_to_savef2, homt, folder_plots, naleles, tag=''):
     with sns.color_palette("Paired", 15):
         az = pivot_df.plot.bar(stacked=True, figsize=(30,15))
     az.set_xticklabels(az.get_xticklabels(), rotation=90)
-
+    plt.ylabel('% reads mapped')
     plt.tight_layout()
     plt.savefig(plotname)
     plt.gcf().clear()
-
 
 def main():
 
@@ -547,10 +552,10 @@ def main():
     hom_filterFR3defmajor, rescued = filterFR3(hom_filterFR3.reset_index().copy(), result, CDR3='major_CDR3')
     hom_filterFR3.to_csv(filter_FR3, sep=',')
              
-    hom_to_savef2 = homology_resume(hom_filterFR3defmajor.reset_index(), rescued,
-                                    outtable2.replace('.xlsx', '-majorcdr3.xlsx'),
-                                    outcoverage, mincov, cov_table, folder_consensus,
-                                    cdr3='major')
+    hom_to_savef2, hom_to_save = homology_resume(hom_filterFR3defmajor.reset_index(), rescued,
+                                                 outtable2.replace('.xlsx', '-majorcdr3.xlsx'),
+                                                 outcoverage, mincov, cov_table, folder_consensus,
+                                                 cdr3='major')
                
     
     ## DATABASE UPDATE ##
@@ -565,12 +570,13 @@ def main():
     if not os.path.isdir(folder_plots):
         os.mkdir(folder_plots)
     
-    usage_plots(hom_to_savef2, homt, folder_plots, naleles)
+    usage_plots(hom_to_savef2, hom_to_save, folder_plots, naleles)
     samples = hom_to_savef2['sample_name'].unique().tolist()
     if len(samples) <= 30:
         for s in samples:
             ds = hom_to_savef2[hom_to_savef2['sample_name'] == s]
-            usage_plots(ds, homt, folder_plots, naleles, tag='{}-'.format(s))
+            ds2 = hom_to_save[hom_to_save['sample_name'] == s]
+            usage_plots(ds, ds2, folder_plots, naleles, tag='{}-'.format(s))
         
 
 if __name__ == "__main__":
