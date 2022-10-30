@@ -44,7 +44,7 @@ def plot_clones(df_clonal, n):
     ax2 = sns.barplot(x="rearrangement", y="invert_diff", hue="max_diff", dodge=False,
                       data=df_clonal.sort_values(by=['sample_name', 
                                                                 'percent_reads_mapped_Vgene']), 
-                     palette=pal2)
+                      palette=pal2)
     #for p in ax2.patches:## uncomment for maxdiff value annotation
     #    ax2.annotate(format(p.get_height(), '.1f'), 
     #                   (p.get_x() + p.get_width() / 2., p.get_height() -3), 
@@ -345,7 +345,7 @@ def homology_resume(hom, rescued, outtable, outcoverage, min_cov,
 
     ## calculate coverage of the clonal rearrangements and include coverage info in homology_resume
     hom_to_savef[hom_to_savef['clone_status'] == 'CLONAL'].to_csv(clonal_rearrangement, sep=',', index=False)
-    coverage_IGHs.calculate_coverage(outcoverage, out, clonal_rearrangement, 10, False, min_cov)
+    #coverage_IGHs.calculate_coverage(outcoverage, out, clonal_rearrangement, 10, False, min_cov)
      
     ## annotate coverage information
     covt = pd.read_csv(cov_table, sep=',')
@@ -451,7 +451,8 @@ def usage_plots(hom_to_savef2, hom_to_save, folder_plots, naleles, tag=''):
 
     plt.tight_layout()
     name = os.path.join(folder_plots, 'counts-Valleles_{}{}.png'.format(tag, str(run)))
-    plt.ylabel('n. mapped reads')
+    plt.ylabel('n. mapped reads', fontsize=115)
+    plt.xlabel('IGHV alleles', fontsize=115)
     plt.savefig(name)
     plt.gcf().clear()
         
@@ -462,7 +463,8 @@ def usage_plots(hom_to_savef2, hom_to_save, folder_plots, naleles, tag=''):
 
     plt.tight_layout()
     name = os.path.join(folder_plots, 'percent-Valleles_{}{}.png'.format(tag, str(run)))
-    plt.ylabel('% mapped reads')
+    plt.ylabel('% mapped reads', fontsize=115)
+    plt.xlabel('IGHV alleles', fontsize=115)
     plt.savefig(name)
     plt.gcf().clear()
                     
@@ -481,7 +483,8 @@ def usage_plots(hom_to_savef2, hom_to_save, folder_plots, naleles, tag=''):
     with sns.color_palette("Paired", 15):
         az = pivot_df.plot.bar(stacked=True, figsize=(30,15))
     az.set_xticklabels(az.get_xticklabels(), rotation=90)
-    plt.ylabel('n. mapped reads')       
+    plt.ylabel('n. mapped reads', fontsize=115)
+    plt.xlabel('IGHV genes', fontsize=115)
     plt.tight_layout()
     plt.savefig(plotname)
     plt.gcf().clear()
@@ -496,7 +499,8 @@ def usage_plots(hom_to_savef2, hom_to_save, folder_plots, naleles, tag=''):
     with sns.color_palette("Paired", 15):
         az = pivot_df.plot.bar(stacked=True, figsize=(30,15))
     az.set_xticklabels(az.get_xticklabels(), rotation=90)
-    plt.ylabel('% reads mapped')
+    plt.ylabel('% reads mapped', fontsize=115)
+    plt.xlabel('IGHV genes', fontsize=115)
     plt.tight_layout()
     plt.savefig(plotname)
     plt.gcf().clear()
