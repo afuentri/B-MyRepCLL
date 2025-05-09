@@ -25,8 +25,8 @@ if not, install the following requirements manually:
 >samtools 1.7 or above  
 >freebayes 1.1.0 or above  
 >seqtk 1.2 or above  
->Python  
->R  
+>Python 3.6 
+>R 3.6
 
 #### PIP Install Requirements
 ```console
