@@ -5,7 +5,8 @@ The strategy is mapping reads separately against the different IMGT gene segment
 
 The first module, src/pipeline.py, annotates VDJ calls and mutational status for all the IGHV alleles found per patient. The second module, src/onlyclonality.py, generates filtering steps for the minimization of artifacts and outputs homology_resume*.xlsx with the final results, with a calculation of the clonal and subclonal fraction on each sample.
 
-![alt text](pipeline.png)
+![alt text](![Uploading Figure2.svg…]()
+)
 
 For installation, first clone the repository.
 
@@ -30,10 +31,9 @@ if not, install the following requirements manually:
 
 #### PIP Install Requirements
 ```console
-## Python 2
+## pip install
 pip install -r requirements.txt 
-## or Python 3
-pip3 install -r requirements.txt
+
 ```
 
 #### Recommended arguments (default workflow validated with CLL data)
