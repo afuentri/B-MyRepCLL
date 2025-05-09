@@ -5,8 +5,7 @@ The strategy is mapping reads separately against the different IMGT gene segment
 
 The first module, src/pipeline.py, annotates VDJ calls and mutational status for all the IGHV alleles found per patient. The second module, src/onlyclonality.py, generates filtering steps for the minimization of artifacts and outputs homology_resume*.xlsx with the final results, with a calculation of the clonal and subclonal fraction on each sample.
 
-![alt text](![Uploading Figure2.svg…]()
-)
+![alt text](pipeline.svg)
 
 For installation, first clone the repository.
 
