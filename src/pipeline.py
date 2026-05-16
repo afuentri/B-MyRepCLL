@@ -1631,7 +1631,7 @@ def function_motifs(k, f, file_name2, out, Vallele, vcf_complete_path):
     # Get sequence and clean it
     # function
     s = []
-    for m in fist[1:]:
+    for m in flist[1:]:
         if not m.startswith('>'):
             s.append(m.strip())
         else:
